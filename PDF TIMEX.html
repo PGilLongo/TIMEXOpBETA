@@ -378,7 +378,12 @@
       .chartWrap,.mapWrap{width:calc(100% - 24px);display:block}
     }
 
-  </style>
+  
+    /* OVERRIDE: ocultar preguntas entre estados */
+    .meta{display:none !important;}
+    /* Si hay separadores o ayudas entre estados */
+    .label{display:none !important;}
+    </style>
 </head>
 
 <body>
@@ -464,6 +469,13 @@
   </div>
 
   <script>
+    // ==========================================================
+    // CONFIGURACIÓN UI
+    // ==========================================================
+    // Si está en true, NO se mostrarán formularios/ventanas entre estados
+    // (Servicio, Intervinientes, Material, Informe, etc.) y el flujo avanzará
+    // automáticamente usando valores vacíos/"—".
+    const HIDE_FORMS_BETWEEN_STATES = true;
     const TH_ACTIVACION = 180;
     const TH_INTERVENCION = 1800;
 
@@ -994,6 +1006,26 @@
     }
 
     function openModal(flow){
+      // Si el usuario no quiere formularios entre estados, avanzamos sin abrir nada.
+      if(HIDE_FORMS_BETWEEN_STATES){
+        if(flow === "activation"){
+          // valores por defecto
+          alertante = alertante || "";
+          servicio = servicio || "—";
+          lugar = lugar || "";
+          // intervinientes/materiales se quedan como estén (normalmente vacíos)
+          finalizeActivation();
+          return;
+        }
+        if(flow === "material"){
+          finalizeFinalizacion();
+          return;
+        }
+        if(flow === "informe"){
+          finalizeDisponibles();
+          return;
+        }
+      }
       modalFlow = flow;
       modalStep = 0;
       overlay.style.display = "flex";

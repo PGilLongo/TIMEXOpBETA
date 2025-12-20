@@ -102,17 +102,35 @@
       maxZoom: 19
     }).addTo(map);
 
-    const kmzIcon = L.icon({
-      iconUrl: "https://i.ibb.co/G39WbBRf/image.png",
-      iconSize: [22,22],
-      iconAnchor: [11,11]
-    });
-
     const meIcon = L.divIcon({
       html: '<div style="width:14px;height:14px;border-radius:50%;background:#2b6cff;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.35)"></div>',
       iconSize:[14,14],
       iconAnchor:[7,7]
     });
+
+    // Iconos de KMZ: sin imagen, un punto (círculo) de color distinto por cada KMZ
+    // 30% más pequeño que el punto de tu ubicación (14px -> ~10px)
+    function kmzColorForIndex(i){
+      // colores bien separados usando el ángulo áureo
+      const hue = (i * 137.508) % 360;
+      return `hsl(${hue} 85% 50%)`;
+    }
+
+    function makeKmzDotIcon(color){
+      const size = 10;   // ~30% menos que 14px
+      const border = 2;  // borde blanco para contraste
+      return L.divIcon({
+        className: "",
+        html: `<div style="
+          width:${size}px;height:${size}px;border-radius:50%;
+          background:${color};
+          border:${border}px solid #fff;
+          box-shadow:0 2px 10px rgba(0,0,0,.25);
+        "></div>`,
+        iconSize:[size, size],
+        iconAnchor:[size/2, size/2]
+      });
+    }
 
     const overlays = {};
     const layersControl = L.control.layers({}, overlays, { collapsed:false }).addTo(map);
@@ -189,6 +207,10 @@
     async function loadKmzFile(file){
       statusEl.textContent = `Leyendo ${file.name}…`;
 
+      // Color e icono para ESTE KMZ
+      const color = kmzColorForIndex(kmzCounter);
+      const kmzDotIcon = makeKmzDotIcon(color);
+
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
       const kmlName = Object.keys(zip.files)
         .find(n => n.toLowerCase().endsWith(".kml"));
@@ -203,7 +225,7 @@
       const geojson = toGeoJSON.kml(dom);
 
       const layer = L.geoJSON(geojson,{
-        pointToLayer:(f,ll)=>L.marker(ll,{icon:kmzIcon}),
+        pointToLayer:(f,ll)=>L.marker(ll,{icon:kmzDotIcon}),
         onEachFeature:(feature, lyr)=>{
           const name = feature?.properties?.name ?? "Elemento";
           const desc = feature?.properties?.description ?? "";
