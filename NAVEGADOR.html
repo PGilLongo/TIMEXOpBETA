@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mi ubicación + KMZ múltiples (capas)</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; width: 100%; }
+
+    .hud {
+      position: absolute; z-index: 9999;
+      top: 12px; left: 12px;
+      background: rgba(255,255,255,.92);
+      padding: 10px 12px; border-radius: 10px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      box-shadow: 0 6px 18px rgba(0,0,0,.15);
+      max-width: 420px;
+    }
+    .hud input { display:block; margin-top: 6px; }
+    .hud small { display:block; opacity:.8; margin-top: 6px; line-height: 1.2; }
+    .row { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap: wrap; }
+    button { cursor:pointer; }
+
+    /* un pelín más grande el control de capas para que sea cómodo */
+    .leaflet-control-layers {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div><b>Mi ubicación + KMZ (múltiples)</b></div>
+
+    <div class="row">
+      <button id="recenterBtn" type="button">Centrarme</button>
+      <label style="display:flex;gap:6px;align-items:center;">
+        <input id="followChk" type="checkbox" checked />
+        seguirme
+      </label>
+      <button id="fitAllBtn" type="button">Ver todo</button>
+    </div>
+
+    <input type="file" id="kmzFile" accept=".kmz" multiple />
+    <small id="status">Pidiendo ubicación… (acepta permisos)</small>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js"></script>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const followChk = document.getElementById("followChk");
+    const recenterBtn = document.getElementById("recenterBtn");
+    const fitAllBtn = document.getElementById("fitAllBtn");
+
+    // Mapa base
+    const map = L.map("map", { zoomControl: true }).setView([40.4168, -3.7038], 6);
+    const baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    // ===== ICONO PARA PUNTOS DEL KMZ (30% más pequeño) =====
+    // Antes: 32x32. 32 * 0.7 = 22.4 -> usamos 22.
+    const KMZ_ICON_URL = "https://i.ibb.co/G39WbBRf/image.png";
+    const kmzIcon = L.icon({
+      iconUrl: KMZ_ICON_URL,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+      popupAnchor: [0, -11]
+    });
+
+    // ===== ICONO PARA "TÚ" =====
+    const meIcon = L.divIcon({
+      className: "",
+      html: `<div style="
+        width:14px;height:14px;border-radius:50%;
+        background:#2b6cff;
+        border:3px solid white;
+        box-shadow:0 2px 10px rgba(0,0,0,.35);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    // ===== Control de capas =====
+    // Base layers (solo uno por ahora)
+    const baseLayers = { "OpenStreetMap": baseLayer };
+
+    // Overlays: aquí iremos añadiendo cada KMZ como una capa con nombre
+    const overlays = {};
+
+    const layersControl = L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
+
+    // Guardamos referencias para "Ver todo"
+    const kmzLayersList = []; // [{name, layer}]
+    let kmzCounter = 1;
+
+    // ===== TU POSICIÓN EN TIEMPO REAL =====
+    let myMarker = null;
+    let myAccuracyCircle = null;
+    let lastLatLng = null;
+    let firstFix = true;
+
+    function updateMyLocation(pos) {
+      const { latitude, longitude, accuracy } = pos.coords;
+      lastLatLng = L.latLng(latitude, longitude);
+
+      if (!myMarker) {
+        myMarker = L.marker(lastLatLng, { icon: meIcon, zIndexOffset: 100000 }).addTo(map).bindPopup("Tú");
+        myAccuracyCircle = L.circle(lastLatLng, { radius: accuracy, weight: 1, fillOpacity: 0.1 }).addTo(map);
+      } else {
+        myMarker.setLatLng(lastLatLng);
+        myAccuracyCircle.setLatLng(lastLatLng);
+        myAccuracyCircle.setRadius(accuracy);
+      }
+
+      statusEl.textContent =
+        `Tu posición: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${Math.round(accuracy)} m)`;
+
+      if (firstFix) {
+        map.setView(lastLatLng, 17);
+        firstFix = false;
+      } else if (followChk.checked) {
+        map.panTo(lastLatLng, { animate: true });
+      }
+    }
+
+    function geoError(err) {
+      statusEl.textContent =
+        `No se pudo obtener tu ubicación: ${err.message}. ` +
+        `Tip: usa HTTPS o localhost y revisa permisos.`;
+    }
+
+    if (!("geolocation" in navigator)) {
+      statusEl.textContent = "Tu navegador no soporta geolocalización.";
+    } else {
+      navigator.geolocation.watchPosition(updateMyLocation, geoError, {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 10000
+      });
+    }
+
+    recenterBtn.addEventListener("click", () => {
+      if (lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(), 17));
+    });
+
+    // ===== Util: bounds de todo lo visible (kmz + tú) =====
+    function fitAllVisible() {
+      let bounds = null;
+
+      // solo capas KMZ que estén activas en el mapa
+      for (const { layer } of kmzLayersList) {
+        if (map.hasLayer(layer)) {
+          const b = layer.getBounds?.();
+          if (b && b.isValid && b.isValid()) bounds = bounds ? bounds.extend(b) : b;
+        }
+      }
+
+      if (lastLatLng) {
+        const meB = L.latLngBounds([lastLatLng, lastLatLng]);
+        bounds = bounds ? bounds.extend(meB) : meB;
+      }
+
+      if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+    }
+
+    fitAllBtn.addEventListener("click", fitAllVisible);
+
+    // ===== CARGAR KMZ (SIN BORRAR LOS ANTERIORES) =====
+    async function loadKmzFile(file) {
+      statusEl.textContent = `Leyendo KMZ: ${file.name}…`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      const kmlFileName = Object.keys(zip.files).find(n => n.toLowerCase().endsWith(".kml"));
+      if (!kmlFileName) throw new Error(`No se encontró ningún .kml dentro de ${file.name}.`);
+
+      const kmlText = await zip.files[kmlFileName].async("text");
+      const dom = new DOMParser().parseFromString(kmlText, "text/xml");
+      const geojson = toGeoJSON.kml(dom);
+
+      // Soporta puntos, líneas y polígonos:
+      const layer = L.geoJSON(geojson, {
+        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: kmzIcon }),
+        style: (feature) => {
+          // estilo por defecto para líneas/polígonos (sin fijar color, Leaflet usa el default)
+          // Devolvemos solo cosas suaves para que se vean bien:
+          const geom = feature?.geometry?.type || "";
+          const isPoly = geom.includes("Polygon");
+          return isPoly ? { weight: 2, fillOpacity: 0.15 } : { weight: 3 };
+        },
+        onEachFeature: (feature, layer) => {
+          const name = feature?.properties?.name ?? "Elemento";
+          const desc = feature?.properties?.description ?? "";
+          const html = desc ? `<b>${name}</b><br/>${desc}` : `<b>${name}</b>`;
+          layer.bindPopup(html);
+        }
+      });
+
+      // Nombre de capa en el panel
+      const label = `${kmzCounter}. ${file.name}`;
+      kmzCounter++;
+
+      // Añadir al control de capas y al mapa (por defecto visible)
+      overlays[label] = layer;
+      layersControl.addOverlay(layer, label);
+      layer.addTo(map);
+
+      kmzLayersList.push({ name: label, layer });
+
+      // Ajustar vista al kmz recién cargado + tu posición
+      let bounds = null;
+      const b = layer.getBounds();
+      if (b && b.isValid && b.isValid()) bounds = b;
+
+      if (lastLatLng) {
+        const meB = L.latLngBounds([lastLatLng, lastLatLng]);
+        bounds = bounds ? bounds.extend(meB) : meB;
+      }
+      if (bounds && bounds.isValid()) map.fitBounds(bounds.pad(0.2));
+
+      statusEl.textContent = `Cargado: ${file.name} (visible en "Capas").`;
+    }
+
+    document.getElementById("kmzFile").addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      // Cargar en serie para que el HUD tenga mensajes coherentes y evitar picos
+      for (const file of files) {
+        try {
+          await loadKmzFile(file);
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = `Error KMZ (${file.name}): ${err.message}`;
+        }
+      }
+
+      // Permite volver a seleccionar el mismo archivo y que dispare change
+      e.target.value = "";
+    });
+  </script>
+</body>
+</html>

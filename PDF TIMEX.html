@@ -1,0 +1,1284 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BOMBA URBANA LIGERA</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f1115;
+      --card:#15181e;
+      --line:rgba(255,255,255,.12);
+      --muted:#9aa4b2;
+
+      --c-yellow:#f6d32d;
+      --c-red:#e01b24;
+      --c-green:#2ec27e;
+      --c-blue:#1c71d8;
+
+      --chip-bg: rgba(255,255,255,.06);
+      --chip-br: rgba(255,255,255,.18);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      background:var(--bg);
+      font-family:system-ui,Arial,sans-serif;
+      color:#fff;
+      padding:clamp(10px, 2.4vw, 16px);
+      overflow-y:auto;
+      transition: background-color .18s ease;
+    }
+
+    body.theme-activacion{ background: var(--c-yellow); }
+    body.theme-intervencion{ background: var(--c-red); }
+    body.theme-finalizacion{ background: var(--c-green); }
+    body.theme-disponibles{ background: var(--c-blue); }
+
+    .app{
+      width:min(920px,100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:var(--card);
+      overflow:hidden;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+      transition: box-shadow .18s ease, border-color .18s ease;
+    }
+
+    body.theme-activacion .app{ border-color: rgba(246,211,45,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(246,211,45,.18) inset; }
+    body.theme-intervencion .app{ border-color: rgba(224,27,36,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(224,27,36,.18) inset; }
+    body.theme-finalizacion .app{ border-color: rgba(46,194,126,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(46,194,126,.18) inset; }
+    body.theme-disponibles .app{ border-color: rgba(28,113,216,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(28,113,216,.18) inset; }
+
+    .hero{
+      width:100%;
+      height:clamp(120px, 22vw, 220px);
+      border-bottom:1px solid var(--line);
+      background:#000;
+      overflow:hidden;
+    }
+    .hero img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    header{
+      padding:clamp(12px, 2.6vw, 16px);
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      background:var(--card);
+    }
+    .headerLeft{display:flex;gap:14px;align-items:flex-start;min-width:0;}
+    .headerText{min-width:0}
+    h1{margin:0;font-size:clamp(16px, 2.4vw, 18px);line-height:1.2}
+
+    .right{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
+      min-width:220px;
+      max-width:420px;
+    }
+    .topActions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
+    .pill{font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;white-space:nowrap;background:rgba(0,0,0,.18);}
+    .actionBtn{font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;}
+    .actionBtn:active{transform:translateY(1px)}
+
+    .timer{
+      font-size:clamp(16px, 3.4vw, 18px);
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      display:none;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(0,0,0,.22);
+      width:100%;
+      text-align:center;
+    }
+    .timer.timer-activacion{border-color: rgba(246,211,45,.55);box-shadow: 0 0 0 2px rgba(246,211,45,.12) inset;}
+    .timer.timer-intervencion{border-color: rgba(224,27,36,.55);box-shadow: 0 0 0 2px rgba(224,27,36,.12) inset;}
+    .timer.timer-finalizacion{border-color: rgba(46,194,126,.55);box-shadow: 0 0 0 2px rgba(46,194,126,.12) inset;}
+    .timer.timer-disponibles{border-color: rgba(28,113,216,.55);box-shadow: 0 0 0 2px rgba(28,113,216,.12) inset;}
+    @keyframes blinkSoft {0%,100%{filter:brightness(1)}50%{filter:brightness(1.35)}}
+    .timer.exceeded{animation: blinkSoft .9s infinite;}
+
+    main{padding:clamp(12px, 2.6vw, 16px); background:var(--card);}
+    .row{display:grid;grid-template-columns:1fr 1.35fr;gap:12px;margin-bottom:12px;align-items:stretch;}
+    button.mainBtn{border:0;border-radius:14px;padding:14px;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;min-height:52px;}
+    button.mainBtn:disabled{opacity:.45;cursor:not-allowed}
+    .yellow{background:var(--c-yellow);color:#111}
+    .red{background:var(--c-red);color:#fff}
+    .green{background:var(--c-green);color:#fff}
+    .blue{background:var(--c-blue);color:#fff}
+
+    .meta{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+      background:rgba(0,0,0,.18);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      min-height:52px;
+      min-width:0;
+    }
+    .label{font-size:11px;color:var(--muted)}
+    .ts{font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+    .panel{border-top:1px solid var(--line);display:none;background:var(--card);}
+    .panelHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;flex-wrap:wrap;}
+    .panelHead h3{margin:0;font-size:14px}
+    .panelActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .smallBtn{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;}
+    .smallBtn:active{transform:translateY(1px)}
+    .log{list-style:none;margin:0;padding:0 16px 12px}
+
+    .log li{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      margin:8px 0;font-size:13px;border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.04);
+      flex-wrap:nowrap;min-height:44px;
+    }
+    .log b{letter-spacing:.2px;white-space:nowrap;flex:0 0 auto;}
+    .log span{
+      font-variant-numeric:tabular-nums;color:rgba(255,255,255,.88);text-align:right;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+      display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 auto;
+    }
+
+    .log li.phase-activacion{background:rgba(246,211,45,.22);border-color:rgba(246,211,45,.45)}
+    .log li.phase-intervencion{background:rgba(224,27,36,.22);border-color:rgba(224,27,36,.45)}
+    .log li.phase-finalizacion{background:rgba(46,194,126,.22);border-color:rgba(46,194,126,.45)}
+    .log li.exceeded{animation: blinkSoft .9s infinite;}
+    .log li.phase-activacion.exceeded{background:rgba(246,211,45,.40);border-color:rgba(246,211,45,.75)}
+    .log li.phase-intervencion.exceeded{background:rgba(224,27,36,.40);border-color:rgba(224,27,36,.75)}
+
+    .servicePill{
+      display:inline-flex;align-items:center;justify-content:flex-end;gap:10px;
+      padding:0;border:0;border-radius:0;background:transparent !important;
+      font-weight:900;font-size:13px;line-height:1;white-space:nowrap;
+      max-width:100%;overflow:hidden;text-overflow:ellipsis;
+    }
+    .servicePill .dot{width:10px;height:10px;border-radius:999px;display:inline-block;flex:0 0 auto;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+
+    .chartWrap,.mapWrap{margin:8px 16px 16px;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.18);}
+    .chartTop,.mapTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+    .chartTop .hint,.mapTop .hint{font-size:12px;color:var(--muted);line-height:1.25;min-width:220px;}
+    canvas{max-width:100%}
+    #map{width:100%;height:clamp(240px, 42vh, 340px);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.10);}
+
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:clamp(10px, 3vw, 16px);z-index:999;}
+    .modal{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      width:min(560px,100%);
+      max-height:calc(100vh - 2*clamp(10px, 3vw, 16px));
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .modalHeader{padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .modalHeader h3{margin:0 0 8px;font-size:16px}
+    .modalHeader p{margin:0;color:var(--muted);font-size:13px;line-height:1.35}
+    .modalBody{padding:12px 16px;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--card);}
+    .modalFooter{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;background:var(--card);}
+    .footerBtn{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font-weight:900;flex:0 0 auto;}
+    .footerBtn.primary{background:var(--c-blue)}
+    .footerBtn:disabled{opacity:.45;cursor:not-allowed}
+    .field{width:100%;margin-top:10px}
+
+    .input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.18);
+      color:#fff;
+      outline:none;
+      font-weight:800;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    textarea.input{resize:vertical;min-height:140px;line-height:1.35;font-weight:700;text-transform:uppercase;}
+    .help{font-size:12px;color:var(--muted);margin-top:6px}
+
+    .chips{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap:10px;
+      margin-top:10px;
+      align-items:stretch;
+    }
+    .chip{
+      position:relative;
+      padding:12px 44px 12px 14px;
+      border-radius:14px;
+      border:2px solid var(--chip-br);
+      background:var(--chip-bg);
+      color:#fff;
+      cursor:pointer;
+      font-weight:900;
+      user-select:none;
+      transition:transform .08s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease, filter .12s ease;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      min-height:48px;
+      width:100%;
+      text-align:left;
+    }
+    .chip:hover{filter:brightness(1.14)}
+    .chip:active{transform:translateY(1px)}
+    .chip.selected{background:rgba(46,194,126,.22);border-color:rgba(46,194,126,.85);box-shadow:0 0 0 2px rgba(46,194,126,.22) inset, 0 10px 24px rgba(0,0,0,.35);transform:translateY(-1px);}
+    .chip.selected::after{content:"✔";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;font-weight:900;color:#00ff7b;text-shadow:0 1px 0 rgba(0,0,0,.5);}
+    .chip.yellowChip{background:rgba(246,211,45,.10);border-color:rgba(246,211,45,.26)}
+    .chip.whiteChip{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16)}
+    .chip.serviceChip{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06)}
+    .chip.serviceChip .dot{display:inline-block;width:10px;height:10px;border-radius:999px;flex:0 0 auto;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
+
+    @media (max-width: 740px){
+      header{flex-direction:column;align-items:stretch}
+      .right{min-width:0;max-width:none;align-items:stretch}
+      .topActions{justify-content:space-between}
+      .row{grid-template-columns:1fr}
+      button.mainBtn{width:100%}
+      .modalFooter .footerBtn{flex:1 1 140px}
+      .chips{grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));}
+    }
+    @media (max-width: 420px){
+      .chips{grid-template-columns:1fr;}
+      .chartTop .hint,.mapTop .hint{min-width:0}
+      .hero{height:clamp(110px, 30vw, 190px)}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="headerLeft">
+        <div class="headerText">
+          <h1 id="headerTitle">BOMBA URBANA LIGERA</h1>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="topActions">
+          <div class="pill" id="status">ACTIVACIÓN</div>
+          <button class="actionBtn" id="toggleLogBtn" type="button" disabled>📋 Ver resultado</button>
+          <button class="actionBtn" id="fsBtn" type="button">⛶ Pantalla completa</button>
+        </div>
+        <div class="timer timer-activacion" id="timer">00:00:00</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="row">
+        <button id="btnA" class="mainBtn yellow" type="button">ACTIVACIÓN</button>
+        <div class="meta"><div class="label">Marcador</div><div class="ts" id="tsA">—</div></div>
+      </div>
+
+      <div class="row">
+        <button id="btnI" class="mainBtn red" type="button" disabled>INTERVENCIÓN</button>
+        <div class="meta"><div class="label">Marcador</div><div class="ts" id="tsI">—</div></div>
+      </div>
+
+      <div class="row">
+        <button id="btnF" class="mainBtn green" type="button" disabled>FINALIZACIÓN</button>
+        <div class="meta"><div class="label">Marcador</div><div class="ts" id="tsF">—</div></div>
+      </div>
+
+      <div class="row">
+        <button id="btnD" class="mainBtn blue" type="button" disabled>DISPONIBLES</button>
+        <div class="meta"><div class="label">Marcador</div><div class="ts" id="tsD">—</div></div>
+      </div>
+    </main>
+
+    <section class="panel" id="panel">
+      <div class="panelHead">
+        <h3>Resultado del ciclo</h3>
+        <div class="panelActions">
+          <button class="smallBtn" id="copyBtn" type="button">Copiar log</button>
+          <button class="smallBtn" id="hideBtn" type="button">Ocultar</button>
+        </div>
+      </div>
+
+      <ul class="log" id="log"></ul>
+
+      <div class="chartWrap">
+        <div class="chartTop">
+          <div class="hint">Gráfico: ACTIVACIÓN (A→I), INTERVENCIÓN (I→F), FINALIZACIÓN (F→D) + techos</div>
+          <button class="smallBtn" id="dlChartBtn" type="button">Descargar gráfico</button>
+        </div>
+        <canvas id="chart" height="140"></canvas>
+      </div>
+
+      <div class="mapWrap">
+        <div class="mapTop">
+          <div class="hint">Mapa: 4 puntos del ciclo (solo puntos)</div>
+        </div>
+        <div id="map"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modalHeader">
+        <h3 id="modalTitle">—</h3>
+        <p id="modalDesc">—</p>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFooter">
+        <button class="footerBtn" id="modalBack" type="button">Atrás</button>
+        <button class="footerBtn primary" id="modalNext" type="button">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TH_ACTIVACION = 180;
+    const TH_INTERVENCION = 1800;
+
+    const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyQ1fDCEEG3kxqWdElRUmxbEsWePqvGv2nItl-PDvN8uF2P_9tfMfDZFVhHafU5JNFx/exec";
+
+    const SERVICIOS = [
+      { name:"Preventivo", color:"#2ec27e" },
+      { name:"Columna de humo", color:"#ff9f0a" },
+      { name:"Conato de incendio", color:"#ff453a" },
+      { name:"Incendio", color:"#e01b24" },
+      { name:"Inundación", color:"#1c71d8" },
+      { name:"Vertido", color:"#7c3aed" },
+      { name:"Intervención estructural", color:"#10b981" },
+      { name:"Intervención vehicular", color:"#22c55e" },
+      { name:"Emergencia sanitaria", color:"#fb7185" },
+      { name:"Himenopteros", color:"#f6d32d" },
+      { name:"Animales", color:"#a3e635" },
+      { name:"Logistica", color:"#60a5fa" },
+      { name:"Servicio urgente por medios", color:"#38bdf8" },
+      { name:"Otros", color:"#cbd5e1" }
+    ];
+
+    const INTERVINIENTES = [
+      { code:"ECO", yellow:false },
+      { code:"B05", yellow:false },
+      { code:"B09", yellow:false },
+      { code:"B07", yellow:true },
+      { code:"B11", yellow:false },
+      { code:"B14", yellow:true },
+      { code:"B15", yellow:true },
+      { code:"B17", yellow:true },
+      { code:"B18", yellow:true },
+      { code:"B19", yellow:true },
+      { code:"B20", yellow:true },
+    ];
+
+    const MATERIALES = [
+      "EPIs","BUGGIE","VIR","BUL","BRL","AVANT",
+      "Material de observación","Material de medición","Material de balizamiento","Material de achique",
+      "Material de extinción","Material de estructuras","Material de demolición","Material de iluminación",
+      "Material de estabilización","Material de rescate","Material vehicular","Material de abejas",
+      "Material de avispas","Material de limpieza","Material de animales",
+      "Medios de tracción","Medios de fortuna","Material de altura","Maquinaria de prevención",
+      "Equipo hidráulico de fuerza","Monitor multiparamétrico","Botiquín de ataque","Fungibles","Herramientas"
+    ];
+
+    const btnA = document.getElementById("btnA");
+    const btnI = document.getElementById("btnI");
+    const btnF = document.getElementById("btnF");
+    const btnD = document.getElementById("btnD");
+
+    const tsA = document.getElementById("tsA");
+    const tsI = document.getElementById("tsI");
+    const tsF = document.getElementById("tsF");
+    const tsD = document.getElementById("tsD");
+
+    const statusEl = document.getElementById("status");
+    const timerEl = document.getElementById("timer");
+
+    const panel = document.getElementById("panel");
+    const logEl = document.getElementById("log");
+
+    const fsBtn = document.getElementById("fsBtn");
+    const toggleLogBtn = document.getElementById("toggleLogBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const hideBtn = document.getElementById("hideBtn");
+    const dlChartBtn = document.getElementById("dlChartBtn");
+
+    const chartCanvas = document.getElementById("chart");
+
+    const overlay = document.getElementById("overlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDesc = document.getElementById("modalDesc");
+    const modalBody = document.getElementById("modalBody");
+    const modalBack = document.getElementById("modalBack");
+    const modalNext = document.getElementById("modalNext");
+
+    const headerTitleEl = document.getElementById("headerTitle");
+
+    let chartInstance = null;
+
+    let alertante = "";
+    let servicio = "—";
+    let lugar = "";
+    let informe = "";
+    let intervinientes = new Set();
+    let materiales = new Set();
+
+    let timerStartMs = null;
+    let timerInterval = null;
+
+    let tA=null, tI=null, tF=null, tD=null;
+    let stage = "activacion";
+
+    let modalFlow = null;
+    let modalStep = 0;
+    let pendingServicio = null;
+
+    let locA = null, locI = null, locF = null, locD = null;
+    let mapInstance = null;
+    let mapLayerGroup = null;
+
+    function setLogVisible(show){
+      panel.style.display = show ? "block" : "none";
+      toggleLogBtn.textContent = show ? "📋 Ocultar resultado" : "📋 Ver resultado";
+
+      if(show){
+        requestAnimationFrame(() => {
+          ensureMap();
+          if(mapInstance) mapInstance.invalidateSize(true);
+          renderCycleMap();
+        });
+      }
+    }
+
+    toggleLogBtn.addEventListener("click", () => {
+      const isVisible = panel.style.display === "block";
+      setLogVisible(!isVisible);
+    });
+
+    function applyThemeForStage(next){
+      document.body.classList.remove(
+        "theme-activacion","theme-intervencion","theme-finalizacion","theme-disponibles"
+      );
+      document.body.classList.add(
+        next === "activacion" ? "theme-activacion" :
+        next === "intervencion" ? "theme-intervencion" :
+        next === "finalizacion" ? "theme-finalizacion" : "theme-disponibles"
+      );
+    }
+
+    function serviceColor(name){
+      const f = SERVICIOS.find(s => s.name === name);
+      return f ? f.color : "rgba(255,255,255,.28)";
+    }
+
+    function timestampES(){
+      return new Date().toLocaleString("es-ES", {
+        day:"2-digit", month:"2-digit", year:"numeric",
+        hour:"2-digit", minute:"2-digit", second:"2-digit"
+      });
+    }
+
+    function pad2(n){ return String(n).padStart(2,"0"); }
+
+    function formatHMS(ms){
+      const s = Math.max(0, Math.floor(ms/1000));
+      const h = Math.floor(s/3600);
+      const m = Math.floor((s%3600)/60);
+      const r = s%60;
+      return `${pad2(h)}:${pad2(m)}:${pad2(r)}`;
+    }
+
+    function setStage(next){
+      stage = next;
+      statusEl.textContent =
+        next === "activacion" ? "ACTIVACIÓN" :
+        next === "intervencion" ? "INTERVENCIÓN" :
+        next === "finalizacion" ? "FINALIZACIÓN" : "DISPONIBLES";
+
+      timerEl.classList.remove("timer-activacion","timer-intervencion","timer-finalizacion","timer-disponibles");
+      timerEl.classList.add(
+        next === "activacion" ? "timer-activacion" :
+        next === "intervencion" ? "timer-intervencion" :
+        next === "finalizacion" ? "timer-finalizacion" : "timer-disponibles"
+      );
+      timerEl.classList.remove("exceeded");
+
+      applyThemeForStage(next);
+    }
+
+    function ensureTimerRunning(){
+      if (timerStartMs === null) timerStartMs = Date.now();
+      if (timerInterval) return;
+      timerEl.style.display = "block";
+      timerInterval = setInterval(() => {
+        timerEl.textContent = formatHMS(Date.now() - timerStartMs);
+      }, 250);
+    }
+
+    function stopTimerAndReset(){
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      timerStartMs = null;
+      timerEl.textContent = "00:00:00";
+      timerEl.classList.remove("exceeded");
+    }
+
+    /* =========================
+       ✅ FIX GEOLOCALIZACIÓN MÓVIL (MOD: NO “CACHE DIRECTO”)
+       - La caché solo se usa como fallback si fallan los intentos,
+         para evitar que todos los marcadores acaben idénticos “por diseño”.
+       ========================= */
+
+    let __lastGoodLoc = null;
+    let __lastGoodLocAt = 0;
+
+    function normalizeGeo(pos){
+      return {
+        lat: +pos.coords.latitude.toFixed(6),
+        lon: +pos.coords.longitude.toFixed(6),
+        acc: Math.round(pos.coords.accuracy || 0)
+      };
+    }
+
+    function geoErrorToText(err){
+      if(!err) return "Error desconocido";
+      if(err.code === 1) return "Permiso de ubicación denegado";
+      if(err.code === 2) return "Ubicación no disponible";
+      if(err.code === 3) return "Tiempo de espera agotado";
+      return err.message || "Error de geolocalización";
+    }
+
+    function requestGeoOnce(options){
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    }
+
+    async function precheckGeoPermissions(){
+      try{
+        if(!navigator.permissions || !navigator.permissions.query) return { state:"unknown" };
+        const p = await navigator.permissions.query({ name: "geolocation" });
+        return { state: p.state };
+      }catch{
+        return { state:"unknown" };
+      }
+    }
+
+    async function getLocationSmart(){
+      if(!navigator.geolocation) return null;
+
+      const isSecure = (window.isSecureContext === true) || location.protocol === "https:" || location.hostname === "localhost";
+      if(!isSecure){
+        alert("⚠️ La geolocalización en móviles requiere HTTPS. Abre esta página con https:// (o en localhost).");
+        return null;
+      }
+
+      const perm = await precheckGeoPermissions();
+      if(perm.state === "denied"){
+        alert("⚠️ La ubicación está bloqueada en el navegador. Activa permisos de ubicación para esta web.");
+        return null;
+      }
+
+      const attempts = [
+        { enableHighAccuracy: true,  timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 120000 }
+      ];
+
+      let lastErr = null;
+
+      for(const opts of attempts){
+        try{
+          const pos = await requestGeoOnce(opts);
+          const loc = normalizeGeo(pos);
+          __lastGoodLoc = loc;
+          __lastGoodLocAt = Date.now();
+          return loc;
+        }catch(e){
+          lastErr = e;
+          if(e && e.code === 1) break;
+        }
+      }
+
+      console.warn("Geolocalización fallida:", geoErrorToText(lastErr), lastErr);
+
+      // ✅ Fallback: si tenemos una última buena ubicación MUY reciente, úsala aquí
+      const now = Date.now();
+      if(__lastGoodLoc && (now - __lastGoodLocAt) <= 120000){
+        return __lastGoodLoc;
+      }
+
+      const msg = geoErrorToText(lastErr);
+      if(msg === "Tiempo de espera agotado" || msg === "Ubicación no disponible"){
+        alert("⚠️ No se pudo obtener la ubicación (GPS). Comprueba: GPS activado, permisos, y cobertura. Se registrará el marcador sin coordenadas.");
+      }else if(msg === "Permiso de ubicación denegado"){
+        alert("⚠️ Permiso de ubicación denegado. Se registrará el marcador sin coordenadas.");
+      }
+
+      return null;
+    }
+
+    function getLocationOnce(cb){
+      getLocationSmart().then(loc => cb(loc)).catch(() => cb(null));
+    }
+    /* ===== FIN FIX GEO (MOD) ===== */
+
+    function mapsLink(loc){
+      if(!loc) return "";
+      const q = `${loc.lat},${loc.lon}`;
+      return `https://maps.google.com/?q=${encodeURIComponent(q)}`;
+    }
+
+    const FS_EXIT_PASSWORD = "Pdft@2026";
+    let fsAuthorizedExit = false;
+
+    async function toggleFullscreen(){
+      try{
+        if(!document.fullscreenElement){
+          await document.documentElement.requestFullscreen();
+          fsBtn.textContent = "⛶ Salir pantalla completa";
+          return;
+        }
+
+        const pass = window.prompt("Contraseña para salir de pantalla completa:");
+        if(pass !== FS_EXIT_PASSWORD){
+          alert("Contraseña incorrecta.");
+          return;
+        }
+
+        fsAuthorizedExit = true;
+        await document.exitFullscreen();
+      }catch{
+        alert("Tu navegador no permite pantalla completa en este contexto.");
+      }
+    }
+    fsBtn.addEventListener("click", toggleFullscreen);
+
+    document.addEventListener("fullscreenchange", async () => {
+      const isFs = !!document.fullscreenElement;
+      fsBtn.textContent = isFs ? "⛶ Salir pantalla completa" : "⛶ Pantalla completa";
+
+      if(!isFs && !fsAuthorizedExit){
+        alert("Para salir de pantalla completa debes introducir la contraseña.");
+        try{ await document.documentElement.requestFullscreen(); }catch{}
+      }
+      fsAuthorizedExit = false;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if(e.key === "Escape" && document.fullscreenElement){
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFullscreen();
+      }
+    }, true);
+
+    function makeEmojiPoint(emoji){
+      const c = document.createElement("canvas");
+      const size = 36;
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext("2d");
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "28px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji";
+      ctx.fillText(emoji, size/2, size/2 + 1);
+      return c;
+    }
+
+    function computeDeltasSeconds(){
+      const activacion = (tA && tI) ? Math.max(0, Math.round((tI - tA)/1000)) : 0;
+      const intervencion = (tI && tF) ? Math.max(0, Math.round((tF - tI)/1000)) : 0;
+      const finalizacion = (tF && tD) ? Math.max(0, Math.round((tD - tF)/1000)) : 0;
+      return { activacion, intervencion, finalizacion };
+    }
+
+    function ensureMap(){
+      if(!window.L) return;
+      if(mapInstance) return;
+
+      mapInstance = L.map("map", { zoomControl:true, attributionControl:true });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(mapInstance);
+
+      mapLayerGroup = L.layerGroup().addTo(mapInstance);
+      mapInstance.setView([40.4168, -3.7038], 5);
+    }
+
+    /* =========================
+       ✅ MOD MAPA: separa marcadores si tienen misma lat/lon
+       - Solo visual (NO toca locA/locI/locF/locD)
+       ========================= */
+
+    function keyLL(lat, lon){
+      return `${lat.toFixed(6)}|${lon.toFixed(6)}`;
+    }
+
+    function offsetSamePoint(lat, lon, idx, total){
+      // ~2-6 metros (aprox). Suficiente para “despegar” el círculo.
+      const base = 0.00003; // ~3m en lat
+      if(total <= 1) return { lat, lon };
+
+      const angle = (Math.PI * 2 * idx) / total;
+      const dLat = Math.cos(angle) * base;
+      // Ajuste simple por latitud para lon
+      const dLon = (Math.sin(angle) * base) / Math.max(0.2, Math.cos(lat * Math.PI/180));
+
+      return { lat: +(lat + dLat).toFixed(6), lon: +(lon + dLon).toFixed(6) };
+    }
+
+    function renderCycleMap(){
+      ensureMap();
+      if(!mapInstance || !mapLayerGroup) return;
+
+      mapLayerGroup.clearLayers();
+
+      const pts = [];
+      if(locA) pts.push({ name:"ACTIVACIÓN", emoji:"🚨", color:"#f6d32d", lat:locA.lat, lon:locA.lon, orig:{...locA} });
+      if(locI) pts.push({ name:"INTERVENCIÓN", emoji:"⚠️", color:"#e01b24", lat:locI.lat, lon:locI.lon, orig:{...locI} });
+      if(locF) pts.push({ name:"FINALIZACIÓN", emoji:"✅", color:"#2ec27e", lat:locF.lat, lon:locF.lon, orig:{...locF} });
+      if(locD) pts.push({ name:"DISPONIBLES", emoji:"🔵", color:"#1c71d8", lat:locD.lat, lon:locD.lon, orig:{...locD} });
+
+      if(!pts.length){
+        mapInstance.setView([40.4168, -3.7038], 5);
+        return;
+      }
+
+      // agrupa duplicados
+      const groups = new Map();
+      pts.forEach(p => {
+        const k = keyLL(p.lat, p.lon);
+        if(!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(p);
+      });
+
+      // aplica offset visual en grupos duplicados
+      const ptsAdj = [];
+      groups.forEach(arr => {
+        const total = arr.length;
+        arr.forEach((p, idx) => {
+          const adj = offsetSamePoint(p.lat, p.lon, idx, total);
+          ptsAdj.push({ ...p, drawLat: adj.lat, drawLon: adj.lon });
+        });
+      });
+
+      ptsAdj.forEach(p => {
+        const m = L.circleMarker([p.drawLat, p.drawLon], {
+          radius: 9,
+          color: p.color,
+          fillColor: p.color,
+          fillOpacity: 0.9,
+          weight: 2
+        }).addTo(mapLayerGroup);
+
+        m.bindTooltip(`${p.emoji} ${p.name}`, { permanent:false, direction:"top" });
+
+        // Popup mostrando coordenada REAL (orig) y link a REAL
+        m.bindPopup(
+          `<b>${p.name}</b><br>${p.orig.lat}, ${p.orig.lon}<br>` +
+          `<a href="${mapsLink({lat:p.orig.lat,lon:p.orig.lon})}" target="_blank" rel="noopener">Abrir en Maps</a>`
+        );
+      });
+
+      const bounds = L.latLngBounds(ptsAdj.map(p => [p.drawLat, p.drawLon]));
+      if(ptsAdj.length === 1){
+        mapInstance.setView(bounds.getCenter(), 17);
+      }else{
+        mapInstance.fitBounds(bounds, { padding:[24,24], maxZoom:19 });
+      }
+
+      requestAnimationFrame(() => {
+        if(mapInstance) mapInstance.invalidateSize(true);
+      });
+    }
+
+    function buildLogChartMap(){
+      const deltas = computeDeltasSeconds();
+      const exA = deltas.activacion > TH_ACTIVACION;
+      const exI = deltas.intervencion > TH_INTERVENCION;
+
+      const interList = intervinientes.size ? Array.from(intervinientes).join(", ") : "—";
+      const matList = materiales.size ? Array.from(materiales).join(", ") : "—";
+
+      const svcColor = serviceColor(servicio);
+      const svcHtml = servicio === "—"
+        ? "—"
+        : `<span class="servicePill"><span class="dot" style="background:${svcColor}"></span>${servicio}</span>`;
+
+      logEl.innerHTML = `
+        <li><b>ALERTANTE</b><span>${alertante || "—"}</span></li>
+        <li><b>SERVICIO</b><span>${svcHtml}</span></li>
+        <li><b>LUGAR</b><span>${lugar || "—"}</span></li>
+        <li><b>INTERVINIENTES</b><span>${interList}</span></li>
+        <li><b>MATERIAL</b><span>${matList}</span></li>
+
+        <li><b>ACTIVACIÓN</b><span>${tsA.textContent}</span></li>
+        <li><b>INTERVENCIÓN</b><span>${tsI.textContent}</span></li>
+        <li><b>FINALIZACIÓN</b><span>${tsF.textContent}</span></li>
+        <li><b>DISPONIBLES</b><span>${tsD.textContent}</span></li>
+
+        <li><b>TIEMPO TOTAL</b><span>${timerEl.textContent}</span></li>
+
+        <li class="phase-activacion ${exA ? "exceeded" : ""}">
+          <b>ACTIVACIÓN (A→I)</b><span>${deltas.activacion} s</span>
+        </li>
+        <li class="phase-intervencion ${exI ? "exceeded" : ""}">
+          <b>INTERVENCIÓN (I→F)</b><span>${deltas.intervencion} s</span>
+        </li>
+        <li class="phase-finalizacion">
+          <b>FINALIZACIÓN (F→D)</b><span>${deltas.finalizacion} s</span>
+        </li>
+
+        <li><b>INFORME</b><span>${informe || "—"}</span></li>
+      `;
+
+      const labels = ["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN"];
+      const y = [deltas.activacion, deltas.intervencion, deltas.finalizacion];
+
+      const pA = makeEmojiPoint("🚨");
+      const pI = makeEmojiPoint("⚠️");
+      const pF = makeEmojiPoint("✅");
+
+      if(chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(chartCanvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label:"Tramo actual (s)",
+              data:y,
+              tension:0.25,
+              borderColor:"#1c71d8",
+              borderWidth:3,
+              pointStyle:[pA,pI,pF],
+              pointRadius:10,
+              pointHoverRadius:11,
+              pointBackgroundColor:"rgba(0,0,0,0)",
+              pointBorderColor:"rgba(0,0,0,0)",
+              pointBorderWidth:0
+            },
+            { label:`Techo de activación (${TH_ACTIVACION}s)`, data:[TH_ACTIVACION,TH_ACTIVACION,TH_ACTIVACION], tension:0, pointRadius:0, borderColor:"#f6d32d", borderWidth:2 },
+            { label:`Techo de intervención (${TH_INTERVENCION}s)`, data:[TH_INTERVENCION,TH_INTERVENCION,TH_INTERVENCION], tension:0, pointRadius:0, borderColor:"#e01b24", borderWidth:2 }
+          ]
+        },
+        options:{
+          responsive:true,
+          animation:false,
+          plugins:{ legend:{ display:true } },
+          scales:{ y:{ beginAtZero:true, title:{ display:true, text:"Segundos" } } }
+        }
+      });
+
+      renderCycleMap();
+    }
+
+    dlChartBtn.addEventListener("click", () => {
+      if(!chartInstance){ alert("Aún no hay gráfico para descargar."); return; }
+      const url = chartInstance.toBase64Image("image/png", 1);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `grafico_tramos_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    });
+
+    function sendCycleToSheet(){
+      const d = computeDeltasSeconds();
+      const payload = {
+        alertante,
+        servicio,
+        lugar,
+        intervinientes: Array.from(intervinientes),
+        materiales: Array.from(materiales),
+        tsA: tsA.textContent,
+        tsI: tsI.textContent,
+        tsF: tsF.textContent,
+        tsD: tsD.textContent,
+        total: timerEl.textContent,
+        dA: d.activacion,
+        dI: d.intervencion,
+        dF: d.finalizacion,
+        informe,
+        locA, locI, locF, locD
+      };
+
+      fetch(SHEET_WEBAPP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) }).catch(()=>{});
+    }
+
+    function openModal(flow){
+      modalFlow = flow;
+      modalStep = 0;
+      overlay.style.display = "flex";
+      renderModalStep();
+    }
+    function closeModal(){
+      overlay.style.display = "none";
+      modalFlow = null;
+      modalStep = 0;
+      modalBody.innerHTML = "";
+      modalNext.onclick = null;
+      modalBack.onclick = null;
+    }
+    function setModalNav(canBack, canNext){
+      modalBack.style.display = canBack ? "inline-flex" : "none";
+      modalNext.style.display = canNext ? "inline-flex" : "none";
+    }
+
+    function resetCycleDataForNewRun(){
+      alertante = "";
+      servicio = "—";
+      lugar = "";
+      informe = "";
+      intervinientes = new Set();
+      materiales = new Set();
+      pendingServicio = null;
+
+      tA=tI=tF=tD=null;
+      locA=locI=locF=locD=null;
+
+      tsA.textContent="—";
+      tsI.textContent="—";
+      tsF.textContent="—";
+      tsD.textContent="—";
+
+      setLogVisible(false);
+      toggleLogBtn.disabled = true;
+    }
+
+    const U = (s, max) => String(s ?? "").trim().toUpperCase().slice(0, max);
+
+    function renderModalStep(){
+      modalBody.innerHTML = "";
+
+      if(modalFlow === "activation"){
+        if(modalStep === 0){
+          modalTitle.textContent = "Alertante";
+          modalDesc.textContent = "Introduce un texto corto (máx 20 caracteres).";
+          const wrap = document.createElement("div");
+          wrap.className = "field";
+          wrap.innerHTML = `
+            <input id="alertanteInput" class="input" type="text" maxlength="20" placeholder="EJ: VECINO, POLICÍA..." />
+            <div class="help"><span id="alertanteCount">0</span>/20</div>
+          `;
+          modalBody.appendChild(wrap);
+
+          const input = wrap.querySelector("#alertanteInput");
+          const count = wrap.querySelector("#alertanteCount");
+          const refresh = () => {
+            count.textContent = input.value.length;
+            modalNext.disabled = input.value.trim().length === 0;
+          };
+          input.addEventListener("input", refresh);
+          setTimeout(() => { refresh(); input.focus(); }, 0);
+
+          setModalNav(false, true);
+          modalNext.textContent = "Continuar";
+          modalNext.onclick = () => { alertante = U(input.value, 20); modalStep = 1; renderModalStep(); };
+          return;
+        }
+
+        if(modalStep === 1){
+          modalTitle.textContent = "Servicio";
+          modalDesc.textContent = "Selecciona el tipo de servicio.";
+          const chips = document.createElement("div");
+          chips.className = "chips";
+
+          SERVICIOS.forEach(s => {
+            const c = document.createElement("div");
+            c.className = "chip serviceChip";
+            c.innerHTML = `<span class="dot" style="background:${s.color}"></span><span>${s.name.toUpperCase()}</span>`;
+            if(pendingServicio === s.name) c.classList.add("selected");
+            c.onclick = () => {
+              pendingServicio = s.name;
+              Array.from(chips.children).forEach(x => x.classList.remove("selected"));
+              c.classList.add("selected");
+              modalNext.disabled = false;
+            };
+            chips.appendChild(c);
+          });
+
+          modalBody.appendChild(chips);
+
+          setModalNav(true, true);
+          modalBack.textContent = "Atrás";
+          modalNext.textContent = "Continuar";
+          modalNext.disabled = !pendingServicio;
+
+          modalBack.onclick = () => { modalStep = 0; renderModalStep(); };
+          modalNext.onclick = () => { servicio = (pendingServicio || servicio); modalStep = 2; renderModalStep(); };
+          return;
+        }
+
+        if(modalStep === 2){
+          modalTitle.textContent = "Lugar";
+          modalDesc.textContent = "Texto corto (máx 20 caracteres).";
+          const wrap = document.createElement("div");
+          wrap.className = "field";
+          wrap.innerHTML = `
+            <input id="lugarInput" class="input" type="text" maxlength="20" placeholder="EJ: KM12, PUENTE..." />
+            <div class="help"><span id="lugarCount">0</span>/20</div>
+          `;
+          modalBody.appendChild(wrap);
+
+          const input = wrap.querySelector("#lugarInput");
+          const count = wrap.querySelector("#lugarCount");
+          const refresh = () => {
+            count.textContent = input.value.length;
+            modalNext.disabled = input.value.trim().length === 0;
+          };
+          input.addEventListener("input", refresh);
+          setTimeout(() => { refresh(); input.focus(); }, 0);
+
+          setModalNav(true, true);
+          modalNext.textContent = "Continuar";
+          modalBack.textContent = "Atrás";
+
+          modalNext.onclick = () => { lugar = U(input.value, 20); modalStep = 3; renderModalStep(); };
+          modalBack.onclick = () => { modalStep = 1; renderModalStep(); };
+          return;
+        }
+
+        if(modalStep === 3){
+          modalTitle.textContent = "Intervinientes";
+          modalDesc.textContent = "Selecciona tantos como quieras (sin repetir).";
+          const chips = document.createElement("div");
+          chips.className = "chips";
+
+          INTERVINIENTES.forEach(item => {
+            const c = document.createElement("div");
+            c.className = `chip ${item.yellow ? "yellowChip" : "whiteChip"}`;
+            c.innerHTML = `<span>${item.code.toUpperCase()}</span>`;
+            if(intervinientes.has(item.code)) c.classList.add("selected");
+            c.onclick = () => {
+              if(intervinientes.has(item.code)) intervinientes.delete(item.code);
+              else intervinientes.add(item.code);
+              c.classList.toggle("selected");
+            };
+            chips.appendChild(c);
+          });
+
+          modalBody.appendChild(chips);
+
+          setModalNav(true, true);
+          modalNext.textContent = "Confirmar";
+          modalBack.textContent = "Atrás";
+          modalNext.disabled = false;
+
+          modalNext.onclick = () => { closeModal(); finalizeActivation(); };
+          modalBack.onclick = () => { modalStep = 2; renderModalStep(); };
+          return;
+        }
+      }
+
+      if(modalFlow === "material"){
+        modalTitle.textContent = "Material de intervención usado";
+        modalDesc.textContent = "Selecciona opciones (multi-selección).";
+        const chips = document.createElement("div");
+        chips.className = "chips";
+
+        MATERIALES.forEach(name => {
+          const c = document.createElement("div");
+          c.className = "chip whiteChip";
+          c.innerHTML = `<span>${name.toUpperCase()}</span>`;
+          if(materiales.has(name)) c.classList.add("selected");
+          c.onclick = () => {
+            if(materiales.has(name)) materiales.delete(name);
+            else materiales.add(name);
+            c.classList.toggle("selected");
+          };
+          chips.appendChild(c);
+        });
+
+        modalBody.appendChild(chips);
+
+        setModalNav(false, true);
+        modalNext.textContent = "Confirmar";
+        modalNext.disabled = false;
+        modalNext.onclick = () => { closeModal(); finalizeFinalizacion(); };
+        return;
+      }
+
+      if(modalFlow === "informe"){
+        modalTitle.textContent = "Informe final";
+        modalDesc.textContent = "Texto largo (máx 1000 caracteres).";
+        const wrap = document.createElement("div");
+        wrap.className = "field";
+        wrap.innerHTML = `
+          <textarea id="informeInput" class="input" maxlength="1000" rows="6" placeholder="ESCRIBE EL INFORME..."></textarea>
+          <div class="help"><span id="infCount">0</span>/1000</div>
+        `;
+        modalBody.appendChild(wrap);
+
+        const ta = wrap.querySelector("#informeInput");
+        const cnt = wrap.querySelector("#infCount");
+        const refresh = () => {
+          cnt.textContent = ta.value.length;
+          modalNext.disabled = ta.value.trim().length === 0;
+        };
+        ta.addEventListener("input", refresh);
+        setTimeout(() => { refresh(); ta.focus(); }, 0);
+
+        setModalNav(false, true);
+        modalNext.textContent = "Finalizar";
+        modalNext.disabled = true;
+
+        modalNext.onclick = () => {
+          informe = U(ta.value, 1000);
+          closeModal();
+          finalizeDisponibles();
+        };
+        return;
+      }
+    }
+
+    function resetButtons(){
+      btnA.disabled=false;
+      btnI.disabled=true;
+      btnF.disabled=true;
+      btnD.disabled=true;
+      setStage("activacion");
+    }
+
+    function updateTimerAlertLive(){
+      if(stage === "intervencion" && tA && !tI){
+        const sec = Math.round((Date.now() - tA)/1000);
+        timerEl.classList.toggle("exceeded", sec > TH_ACTIVACION);
+      }else if(stage === "finalizacion" && tI && !tF){
+        const sec = Math.round((Date.now() - tI)/1000);
+        timerEl.classList.toggle("exceeded", sec > TH_INTERVENCION);
+      }else{
+        timerEl.classList.remove("exceeded");
+      }
+    }
+    setInterval(updateTimerAlertLive, 500);
+
+    function finalizeActivation(){
+      getLocationOnce(loc => {
+        locA = loc;
+        tA = Date.now();
+        tsA.textContent = timestampES();
+        btnA.disabled = true;
+        btnI.disabled = false;
+        setStage("intervencion");
+      });
+    }
+
+    btnI.addEventListener("click", () => {
+      ensureTimerRunning();
+      getLocationOnce(loc => {
+        locI = loc;
+        tI = Date.now();
+        tsI.textContent = timestampES();
+        btnI.disabled = true;
+        btnF.disabled = false;
+        setStage("finalizacion");
+      });
+    });
+
+    btnF.addEventListener("click", () => {
+      ensureTimerRunning();
+      openModal("material");
+    });
+
+    function finalizeFinalizacion(){
+      getLocationOnce(loc => {
+        locF = loc;
+        tF = Date.now();
+        tsF.textContent = timestampES();
+        btnF.disabled = true;
+        btnD.disabled = false;
+        setStage("disponibles");
+      });
+    }
+
+    btnD.addEventListener("click", () => {
+      ensureTimerRunning();
+      getLocationOnce(loc => {
+        locD = loc;
+        tD = Date.now();
+        tsD.textContent = timestampES();
+        openModal("informe");
+      });
+    });
+
+    function finalizeDisponibles(){
+      buildLogChartMap();
+      sendCycleToSheet();
+
+      toggleLogBtn.disabled = false;
+      setLogVisible(false);
+
+      stopTimerAndReset();
+      resetButtons();
+    }
+
+    btnA.addEventListener("click", () => {
+      resetCycleDataForNewRun();
+      ensureTimerRunning();
+      openModal("activation");
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const txt = (function(){
+        const d = computeDeltasSeconds();
+        const interList = intervinientes.size ? Array.from(intervinientes).join(", ") : "—";
+        const matList = materiales.size ? Array.from(materiales).join(", ") : "—";
+        return [
+          `ALERTANTE: ${alertante || "—"}`,
+          `SERVICIO: ${servicio}`,
+          `LUGAR: ${lugar || "—"}`,
+          `INTERVINIENTES: ${interList}`,
+          `MATERIAL: ${matList}`,
+          `ACTIVACIÓN: ${tsA.textContent}`,
+          `INTERVENCIÓN: ${tsI.textContent}`,
+          `FINALIZACIÓN: ${tsF.textContent}`,
+          `DISPONIBLES: ${tsD.textContent}`,
+          `TIEMPO TOTAL: ${timerEl.textContent}`,
+          `ACTIVACIÓN (A→I): ${d.activacion}s`,
+          `INTERVENCIÓN (I→F): ${d.intervencion}s`,
+          `FINALIZACIÓN (F→D): ${d.finalizacion}s`,
+          `INFORME: ${informe || "—"}`
+        ].join("\n");
+      })();
+
+      try{ await navigator.clipboard.writeText(txt); }
+      catch{ window.prompt("Copia el log:", txt); }
+    });
+
+    hideBtn.addEventListener("click", () => setLogVisible(false));
+
+    setLogVisible(false);
+    toggleLogBtn.disabled = true;
+
+    resetButtons();
+    stopTimerAndReset();
+  </script>
+</body>
+</html>
