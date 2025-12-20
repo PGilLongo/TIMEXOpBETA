@@ -573,26 +573,22 @@
     let pendingServicio = null;
 
     let locA = null, locI = null, locF = null, locD = null;
+    let mapInstance = null;
+    let mapLayerGroup = null;
 
-    // --- VISOR (enviar marcador al VISOR) ---
+
+    // --- VISOR (enviar marcador al mapa VISOR) ---
     function __sendToVISOR(estado, loc, label){
-      if(!loc) return;
-      const lat = Number(loc.lat);
-      const lng = Number(loc.lon);
-      if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
+      if(!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return;
       window.dispatchEvent(new CustomEvent("VISOR_SEND", {
         detail: {
           estado: String(estado || "").toUpperCase().trim(),
-          lat: lat,
-          lng: lng,
+          lat: loc.lat,
+          lng: loc.lon,
           label: (label || document.title || "TIMEX")
         }
       }));
     }
-    let mapInstance = null;
-    let mapLayerGroup = null;
-
     function setLogVisible(show){
       panel.style.display = show ? "block" : "none";
       toggleLogBtn.textContent = show ? "📋 Ocultar resultado" : "📋 Ver resultado";
@@ -1291,7 +1287,8 @@
 
     function finalizeActivation(){
       getLocationOnce(loc => {
-        \1        __sendToVISOR('ACTIVACION', locA, headerTitleEl?.textContent || document.title);
+        locA = loc;
+        __sendToVISOR('ACTIVACION', locA, headerTitleEl?.textContent || document.title);
         tA = Date.now();
         tsA.textContent = timestampES();
         btnA.disabled = true;
@@ -1303,7 +1300,8 @@
     btnI.addEventListener("click", () => {
       ensureTimerRunning();
       getLocationOnce(loc => {
-        \1        __sendToVISOR('INTERVENCION', locI, headerTitleEl?.textContent || document.title);
+        locI = loc;
+        __sendToVISOR('INTERVENCION', locI, headerTitleEl?.textContent || document.title);
         tI = Date.now();
         tsI.textContent = timestampES();
         btnI.disabled = true;
@@ -1319,7 +1317,8 @@
 
     function finalizeFinalizacion(){
       getLocationOnce(loc => {
-        \1        __sendToVISOR('FINALIZACION', locF, headerTitleEl?.textContent || document.title);
+        locF = loc;
+        __sendToVISOR('FINALIZACION', locF, headerTitleEl?.textContent || document.title);
         tF = Date.now();
         tsF.textContent = timestampES();
         btnF.disabled = true;
@@ -1331,7 +1330,8 @@
     btnD.addEventListener("click", () => {
       ensureTimerRunning();
       getLocationOnce(loc => {
-        \1        __sendToVISOR('DISPONIBLES', locD, headerTitleEl?.textContent || document.title);
+        locD = loc;
+        __sendToVISOR('DISPONIBLES', locD, headerTitleEl?.textContent || document.title);
         tD = Date.now();
         tsD.textContent = timestampES();
         openModal("informe");
