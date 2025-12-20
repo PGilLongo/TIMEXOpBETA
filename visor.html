@@ -62,16 +62,17 @@
     const estadoDot = document.getElementById('estadoDot');
     const estadoTxt = document.getElementById('estadoTxt');
 
-    const COLORS = {
-      ACTIVACION: '#2563eb',
-      INTERVENCION: '#f59e0b',
-      FINALIZACION: '#16a34a',
-      DISPONIBLES: '#6b7280'
+    const FALLBACK_COLORS = {
+      ACTIVACION: '#f6d32d',
+      INTERVENCION: '#e01b24',
+      FINALIZACION: '#2ec27e',
+      DISPONIBLES: '#1c71d8'
     };
 
-    function colorForEstado(estado) {
-      const k = String(estado || '').toUpperCase().trim();
-      return COLORS[k] || '#999';
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[s]));
     }
 
     function pinIcon(color) {
@@ -83,10 +84,10 @@
       });
     }
 
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, s => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[s]));
+    function normalizeColor(c){
+      const s = String(c || "").trim();
+      // allow hex, rgb/rgba, hsl etc - Leaflet will accept CSS colors; keep as-is if non-empty
+      return s ? s : null;
     }
 
     function showMarker(payload) {
@@ -99,7 +100,11 @@
       const label = (payload && payload.label) ? String(payload.label) : estado;
 
       layer.clearLayers();
-      const color = colorForEstado(estado);
+
+      const color =
+        normalizeColor(payload && payload.color) ||
+        FALLBACK_COLORS[estado] ||
+        '#999';
 
       const m = L.marker([lat, lng], { icon: pinIcon(color) }).addTo(layer);
       m.bindPopup('<b>' + escapeHtml(label) + '</b><br><span style="color:#555;">' + escapeHtml(estado) + '</span>').openPopup();
@@ -110,24 +115,9 @@
       estadoTxt.textContent = estado + ' → ' + label;
     }
 
-    function clear() {
-      layer.clearLayers();
-      estadoDot.style.background = '#999';
-      estadoTxt.textContent = 'Esperando eventos…';
-    }
+    window.VISOR = { showMarker };
 
-    window.VISOR = { showMarker, clear };
-
-    // 1) postMessage (si la ventana se abre desde otra pestaña)
-    window.addEventListener('message', (event) => {
-      const data = event && event.data;
-      if (!data || typeof data !== 'object') return;
-      if (data.type !== 'VISOR_MARKER') return;
-      const payload = data.payload || data;
-      showMarker(payload);
-    });
-
-    // 2) BroadcastChannel (funciona entre pestañas sin popups)
+    // BroadcastChannel (principal)
     try{
       const bc = new BroadcastChannel('VISOR_CHANNEL');
       bc.onmessage = (ev) => {

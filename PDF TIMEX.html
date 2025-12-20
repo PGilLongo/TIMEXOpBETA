@@ -577,17 +577,7 @@
     let mapLayerGroup = null;
 
 
-    // --- VISOR (enviar marcador al mapa VISOR) ---
-    function __sendToVISOR(estado, loc, label){
-      if(!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return;
-      window.dispatchEvent(new CustomEvent("VISOR_SEND", {
-        detail: {
-          estado: String(estado || "").toUpperCase().trim(),
-          lat: loc.lat,
-          lng: loc.lon,
-          label: (label || document.title || "TIMEX")
-        }
-      }));
+          }));
     }
     function setLogVisible(show){
       panel.style.display = show ? "block" : "none";
@@ -1287,8 +1277,7 @@
 
     function finalizeActivation(){
       getLocationOnce(loc => {
-        locA = loc;
-        __sendToVISOR('ACTIVACION', locA, headerTitleEl?.textContent || document.title);
+        \1        __sendToVISOR('ACTIVACION', locA, headerTitleEl?.textContent || document.title);
         tA = Date.now();
         tsA.textContent = timestampES();
         btnA.disabled = true;
@@ -1300,8 +1289,7 @@
     btnI.addEventListener("click", () => {
       ensureTimerRunning();
       getLocationOnce(loc => {
-        locI = loc;
-        __sendToVISOR('INTERVENCION', locI, headerTitleEl?.textContent || document.title);
+        \1        __sendToVISOR('INTERVENCION', locI, headerTitleEl?.textContent || document.title);
         tI = Date.now();
         tsI.textContent = timestampES();
         btnI.disabled = true;
@@ -1317,8 +1305,7 @@
 
     function finalizeFinalizacion(){
       getLocationOnce(loc => {
-        locF = loc;
-        __sendToVISOR('FINALIZACION', locF, headerTitleEl?.textContent || document.title);
+        \1        __sendToVISOR('FINALIZACION', locF, headerTitleEl?.textContent || document.title);
         tF = Date.now();
         tsF.textContent = timestampES();
         btnF.disabled = true;
@@ -1330,8 +1317,7 @@
     btnD.addEventListener("click", () => {
       ensureTimerRunning();
       getLocationOnce(loc => {
-        locD = loc;
-        __sendToVISOR('DISPONIBLES', locD, headerTitleEl?.textContent || document.title);
+        \1        __sendToVISOR('DISPONIBLES', locD, headerTitleEl?.textContent || document.title);
         tD = Date.now();
         tsD.textContent = timestampES();
         openModal("informe");
