@@ -118,6 +118,7 @@
 
     window.VISOR = { showMarker, clear };
 
+    // 1) postMessage (si la ventana se abre desde otra pestaña)
     window.addEventListener('message', (event) => {
       const data = event && event.data;
       if (!data || typeof data !== 'object') return;
@@ -125,6 +126,18 @@
       const payload = data.payload || data;
       showMarker(payload);
     });
+
+    // 2) BroadcastChannel (funciona entre pestañas sin popups)
+    try{
+      const bc = new BroadcastChannel('VISOR_CHANNEL');
+      bc.onmessage = (ev) => {
+        const data = ev && ev.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type !== 'VISOR_MARKER') return;
+        const payload = data.payload || data;
+        showMarker(payload);
+      };
+    }catch(e){}
   </script>
 </body>
 </html>
