@@ -152,6 +152,20 @@
       align-items:center;
       flex-wrap: wrap;
     }
+    .sheet-wrap{
+      margin-top:6px;
+      display:flex;
+      gap:6px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .sheet-wrap input{ flex: 1 1 240px; }
+    .sheet-wrap .status{
+      font-size:12px;
+      opacity:.85;
+      min-width:120px;
+    }
+
 
     .size-btn{
       padding: 4px 8px;
@@ -300,6 +314,15 @@
         <button id="meSizeDownBtn" type="button" class="size-btn" title="Icono ubicación más pequeño">−</button>
         <button id="meSizeUpBtn" type="button" class="size-btn" title="Icono ubicación más grande">+</button>
       </div>
+
+
+      <div class="sheet-wrap">
+        <input id="sheetsEndpoint" type="url" placeholder="URL WebApp Sheets…" inputmode="url" autocomplete="off" />
+        <input id="sheetsToken" type="text" placeholder="Token Sheets…" autocomplete="off" />
+        <button id="saveSheetsBtn" type="button" title="Guardar configuración">Guardar</button>
+        <span id="sheetsStatus" class="status" aria-live="polite"></span>
+      </div>
+
     </div>
 
     <input type="file" id="kmzFile" accept=".kmz" multiple />
@@ -339,6 +362,11 @@
 
       const meIconUrlInput = $("meIconUrl");
       const applyMeIconBtn = $("applyMeIconBtn");
+      const sheetsEndpointInput = $("sheetsEndpoint");
+      const sheetsTokenInput = $("sheetsToken");
+      const saveSheetsBtn = $("saveSheetsBtn");
+      const sheetsStatusEl = $("sheetsStatus");
+
       const meSizeUpBtn = $("meSizeUpBtn");
       const meSizeDownBtn = $("meSizeDownBtn");
 
@@ -347,6 +375,7 @@
       const KMZ_STORE = "kmzFiles";
       const LS_KMZ_META_KEY = "kmz_meta_v1";
       const LS_ME_ICON_KEY = "me_icon_v1";
+      const LS_SHEETS_KEY = "sheets_push_v1";
       const LS_HUD_MIN_KEY = "hud_minimized_v1";
 
       const poiIndex = [];
@@ -507,7 +536,51 @@
         try { return safeJsonParse(localStorage.getItem(LS_ME_ICON_KEY), null); } catch { return null; }
       };
 
-      const kmzColorForIndex = (i) => `hsl(${(i * 137.508) % 360} 85% 50%)`;
+      
+      let sheetsEndpoint = "";
+      let sheetsToken = "";
+      let lastSheetsSend = 0;
+
+      const saveSheetsPrefs = () => {
+        const prefs = { endpoint: sheetsEndpoint || "", token: sheetsToken || "" };
+        try { localStorage.setItem(LS_SHEETS_KEY, JSON.stringify(prefs)); } catch {}
+      };
+
+      const loadSheetsPrefs = () => {
+        try { return safeJsonParse(localStorage.getItem(LS_SHEETS_KEY), null); } catch { return null; }
+      };
+
+      const setSheetsStatus = (msg) => {
+        if (!sheetsStatusEl) return;
+        sheetsStatusEl.textContent = msg || "";
+        if (msg) {
+          clearTimeout(setSheetsStatus._t);
+          setSheetsStatus._t = setTimeout(() => { if (sheetsStatusEl.textContent === msg) sheetsStatusEl.textContent = ""; }, 2500);
+        }
+      };
+
+      const sendCoordsToSheets = (lat, lng, acc, ts) => {
+        if (!sheetsEndpoint || !sheetsToken) return;
+        const now = Date.now();
+        if ((now - lastSheetsSend) < 3000) return;
+        lastSheetsSend = now;
+
+        const payload = { token: sheetsToken, lat, lng, acc: acc || 0, ts: ts || now };
+
+        // Apps Script webapp normalmente no expone CORS -> usamos no-cors para asegurar el envío en PWA Android/Chrome
+        fetch(sheetsEndpoint, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(() => {
+          setSheetsStatus("Enviado");
+        }).catch(() => {
+          setSheetsStatus("Error envío");
+        });
+      };
+
+const kmzColorForIndex = (i) => `hsl(${(i * 137.508) % 360} 85% 50%)`;
 
       const makeKmzDotIcon = (color) => {
         const size = 10;
@@ -950,6 +1023,9 @@ const clearRoute = () => {
     map.panTo(lastLatLng, { animate: true });
   }
 
+  if (followChk.checked) sendCoordsToSheets(latitude, longitude, accuracy, pos.timestamp);
+
+
   if (trackGuideLine && trackGuideState?.destLatLng && lastLatLng) {
     if (trackGuideState.trackLatlngs?.length >= 2) {
       const tr = trackGuideState.trackLatlngs;
@@ -979,6 +1055,15 @@ const clearRoute = () => {
           }
         }
         meIconUrlInput.value = meIconUrl || "";
+
+        const sp = loadSheetsPrefs();
+        if (sp && typeof sp === "object") {
+          if (typeof sp.endpoint === "string") sheetsEndpoint = sp.endpoint.trim();
+          if (typeof sp.token === "string") sheetsToken = sp.token.trim();
+        }
+        if (sheetsEndpointInput) sheetsEndpointInput.value = sheetsEndpoint || "";
+        if (sheetsTokenInput) sheetsTokenInput.value = sheetsToken || "";
+
 
         try { await restorePersistedKmz(); } catch {}
         ensureKmzSelectEnabled();
@@ -1061,6 +1146,15 @@ followChk.addEventListener("change", () => {
         myMarker?.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
         saveMeIconPrefs();
       });
+
+      saveSheetsBtn.addEventListener("click", () => {
+        sheetsEndpoint = (sheetsEndpointInput.value || "").trim();
+        sheetsToken = (sheetsTokenInput.value || "").trim();
+        saveSheetsPrefs();
+        setSheetsStatus(sheetsEndpoint && sheetsToken ? "Guardado" : "Falta URL/token");
+      });
+
+
 
       meSizeUpBtn.addEventListener("click", () => {
         if (!meIconUrl) return;
