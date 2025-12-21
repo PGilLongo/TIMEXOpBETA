@@ -377,6 +377,7 @@
       const LS_ME_ICON_KEY = "me_icon_v1";
       const LS_SHEETS_KEY = "sheets_push_v1";
       const LS_HUD_MIN_KEY = "hud_minimized_v1";
+      const DEFAULT_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyVoOiNjza3_21FpJ1C8gQeHahU_l_-8-5kBfxtjNVP3xAsrld38cakJvhOwkUZ-jH9zQ/exec";
 
       const poiIndex = [];
       const trackIndex = [];
@@ -1061,6 +1062,7 @@ const clearRoute = () => {
           if (typeof sp.endpoint === "string") sheetsEndpoint = sp.endpoint.trim();
           if (typeof sp.token === "string") sheetsToken = sp.token.trim();
         }
+        if (!sheetsEndpoint) sheetsEndpoint = DEFAULT_SHEETS_ENDPOINT;
         if (sheetsEndpointInput) sheetsEndpointInput.value = sheetsEndpoint || "";
         if (sheetsTokenInput) sheetsTokenInput.value = sheetsToken || "";
 
