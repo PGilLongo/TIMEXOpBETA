@@ -239,6 +239,17 @@
       background: transparent;
     }
 
+
+    /* --- Rotación del mapa (modo brújula / navegador) --- */
+    #map .leaflet-pane,
+    #map .leaflet-control-container{
+      transform-origin: 50% 50%;
+    }
+    /* Rotamos SOLO el contenido del mapa (panes). Controles (zoom/layers) quedan sin rotar */
+    #map.rotate .leaflet-map-pane{
+      transform: rotate(var(--map-rot, 0deg)) scale(var(--map-scale, 1));
+    }
+
 </style>
 </head>
 <body>
@@ -303,6 +314,16 @@
   <script>
     const statusEl = document.getElementById("status");
     const followChk = document.getElementById("followChk");
+
+    if(followChk){
+      followChk.addEventListener("change", ()=>{
+        if(!followChk.checked){
+          clearMapRotation();
+          // vuelve a dejar el icono en 0°
+          setMeBearingDegrees(0);
+        }
+      });
+    }
     const recenterBtn = document.getElementById("recenterBtn");
     const fitAllBtn = document.getElementById("fitAllBtn");
     const kmzInput = document.getElementById("kmzFile");
@@ -642,6 +663,61 @@
     });
 
     const map = L.map("map").setView([40.4168, -3.7038], 6);
+
+    // --- Rotación del mapa según heading (cuando "seguirme" está activo) ---
+    const mapEl = document.getElementById("map");
+    let mapRotDeg = 0;      // rotación actual aplicada
+    let mapRotTarget = 0;   // rotación objetivo (deg)
+    let mapRotRaf = 0;
+
+    function setMapRotationDegrees(deg){
+      // Para que la dirección de movimiento quede "arriba", giramos el mapa al contrario del heading
+      const d = (typeof deg === "number" && isFinite(deg)) ? deg : 0;
+      mapRotTarget = -d;
+
+      // Normaliza a [-180,180] para transiciones suaves
+      while(mapRotTarget > 180) mapRotTarget -= 360;
+      while(mapRotTarget < -180) mapRotTarget += 360;
+
+      if(!mapRotRaf){
+        mapRotRaf = requestAnimationFrame(animateMapRotation);
+      }
+    }
+
+    function animateMapRotation(){
+      mapRotRaf = 0;
+      // interpolación simple (suave)
+      const diff = mapRotTarget - mapRotDeg;
+      if(Math.abs(diff) < 0.5){
+        mapRotDeg = mapRotTarget;
+      }else{
+        mapRotDeg = mapRotDeg + diff * 0.18;
+      }
+
+      if(mapEl){
+        mapEl.classList.toggle("rotate", true);
+
+        // Escala ligera para evitar esquinas vacías al rotar (aprox. para rotaciones habituales)
+        const abs = Math.abs(mapRotDeg);
+        const scale = abs > 1 ? 1.12 : 1.0;
+        mapEl.style.setProperty("--map-rot", `${mapRotDeg}deg`);
+        mapEl.style.setProperty("--map-scale", `${scale}`);
+      }
+
+      if(Math.abs(mapRotTarget - mapRotDeg) >= 0.5){
+        mapRotRaf = requestAnimationFrame(animateMapRotation);
+      }
+    }
+
+    function clearMapRotation(){
+      mapRotTarget = 0;
+      mapRotDeg = 0;
+      if(mapEl){
+        mapEl.style.setProperty("--map-rot", `0deg`);
+        mapEl.style.setProperty("--map-scale", `1`);
+        mapEl.classList.remove("rotate");
+      }
+    }
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19
     }).addTo(map);
@@ -766,10 +842,15 @@
         myAccuracyCircle.setRadius(accuracy);
       }
 
-      // Orientación: si "seguirme" está activo y el dispositivo aporta heading, rota el marcador (estilo navegador)
+      // Orientación: si "seguirme" está activo y el dispositivo aporta heading, rota el MAPA para que avances "hacia arriba"
       const hd = (pos && pos.coords) ? pos.coords.heading : null; // grados (0=norte)
       if(followChk.checked && typeof hd === "number" && isFinite(hd)){
-        setMeBearingDegrees(hd);
+        setMapRotationDegrees(hd);
+        // Con el mapa rotando, dejamos tu icono "mirando arriba"
+        setMeBearingDegrees(0);
+      }else{
+        // Si no hay heading, no rotamos
+        clearMapRotation();
       }
 
       
