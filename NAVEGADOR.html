@@ -184,7 +184,62 @@
     }
 
 
-  </style>
+  
+    /* Asegura transparencia en iconos (png con alpha) */
+    .leaflet-marker-icon.kmz-img-icon,
+    .leaflet-marker-icon.me-img-icon{
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Marcador "yo" rotatable (flecha) */
+    .me-rot-wrap{
+      width: 18px;
+      height: 18px;
+      transform-origin: 50% 50%;
+      will-change: transform;
+      pointer-events: none;
+    }
+    .me-rot-arrow{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 0;
+      height: 0;
+      transform: translate(-50%, -60%);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 10px solid #2b6cff;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+    }
+    .me-rot-dot{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #2b6cff;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+    .me-rot-img{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      overflow: hidden;
+      background: transparent;
+    }
+    .me-rot-img img{
+      display:block;
+      background: transparent;
+    }
+
+</style>
 </head>
 <body>
   <div class="hud" id="hud">
@@ -220,7 +275,8 @@
       <input id="iconUrl" type="url" placeholder="URL directa del icono (png/svg/webp)…" inputmode="url" autocomplete="off" />
       <button id="applyIconBtn" type="button" title="Aplicar icono al KMZ seleccionado">Aplicar icono</button>
       <button id="resetIconBtn" type="button" title="Volver al punto de color">Punto</button>
-      <button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
+            <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">🗑️ Borrar KMZ</button>
+<button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
       <button id="sizeUpBtn" type="button" class="size-btn" title="Icono más grande">+</button>
     </div>
 
@@ -302,6 +358,17 @@
       });
     }
 
+
+    async function idbDeleteKmz(id){
+      const db = await openKmzDb();
+      return new Promise((resolve,reject)=>{
+        const tx = db.transaction(KMZ_STORE, "readwrite");
+        tx.objectStore(KMZ_STORE).delete(id);
+        tx.oncomplete = ()=>{ db.close(); resolve(true); };
+        tx.onerror = ()=>{ const err=tx.error; db.close(); reject(err); };
+      });
+    }
+
     function saveKmzMeta(){
       const meta = kmzLayersList.map(e=>({
         label: e.label,
@@ -345,7 +412,8 @@
     const meSizeUpBtn = document.getElementById("meSizeUpBtn");
     const meSizeDownBtn = document.getElementById("meSizeDownBtn");
 
-    // Índice de puntos (placemarks) por nombre
+        const deleteKmzBtn = document.getElementById("deleteKmzBtn");
+// Índice de puntos (placemarks) por nombre
     // { name, latlng, marker, kmzLabel }
     const poiIndex = [];
 
@@ -488,9 +556,40 @@
         iconUrl: url,
         iconSize: [size, size],
         iconAnchor: [size/2, size/2],
-        popupAnchor: [0, -size/2]
+        popupAnchor: [0, -size/2],
+        className: "me-img-icon"
       });
     }
+
+    function makeMeRotIcon(url, size){
+      // Un icono rotatable: flecha siempre presente; si hay imagen, se muestra en el centro.
+      const s = Math.max(10, Math.min(96, Math.round(size || 14)));
+      const imgHtml = url ? `
+        <span class="me-rot-img" style="width:${s}px;height:${s}px;">
+          <img class="me-img" src="${url}" style="width:${s}px;height:${s}px;" />
+        </span>` : ``;
+
+      return L.divIcon({
+        className: "me-rot-icon",
+        html: `<div class="me-rot-wrap">
+                 <span class="me-rot-arrow"></span>
+                 ${imgHtml || `<span class="me-rot-dot"></span>`}
+               </div>`,
+        iconSize: [18,18],
+        iconAnchor: [9,9]
+      });
+    }
+
+    function setMeBearingDegrees(deg){
+      if(!myMarker) return;
+      const el = myMarker.getElement && myMarker.getElement();
+      if(!el) return;
+      const wrap = el.querySelector && el.querySelector(".me-rot-wrap");
+      if(!wrap) return;
+      const d = (typeof deg === "number" && isFinite(deg)) ? deg : 0;
+      wrap.style.transform = `rotate(${d}deg)`;
+    }
+
 
     function kmzColorForIndex(i){
       // colores bien separados usando el ángulo áureo
@@ -548,7 +647,7 @@
       lastLatLng = L.latLng(latitude, longitude);
 
       if(!myMarker){
-        const icon = meIconUrl ? makeMeImageIcon(meIconUrl, meIconSize) : meIcon;
+        const icon = makeMeRotIcon(meIconUrl, meIconSize);
         myMarker = L.marker(lastLatLng,{icon}).addTo(map);
         myAccuracyCircle = L.circle(lastLatLng,{
           radius:accuracy,
@@ -557,9 +656,15 @@
         }).addTo(map);
       }else{
         myMarker.setLatLng(lastLatLng);
-        if(meIconUrl){ myMarker.setIcon(makeMeImageIcon(meIconUrl, meIconSize)); }
+        myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
         myAccuracyCircle.setLatLng(lastLatLng);
         myAccuracyCircle.setRadius(accuracy);
+      }
+
+      // Orientación: si "seguirme" está activo y el dispositivo aporta heading, rota el marcador (estilo navegador)
+      const hd = (pos && pos.coords) ? pos.coords.heading : null; // grados (0=norte)
+      if(followChk.checked && typeof hd === "number" && isFinite(hd)){
+        setMeBearingDegrees(hd);
       }
 
       
@@ -615,27 +720,27 @@
       if(!url){
         meIconUrl = "";
         meIconSize = 14;
-        myMarker && myMarker.setIcon(meIcon);
+        myMarker && myMarker.setIcon(makeMeRotIcon("", meIconSize));
         saveMeIconPrefs();
         return;
       }
       meIconUrl = url;
       meIconSize = meIconSize || 14;
-      myMarker && myMarker.setIcon(makeMeImageIcon(meIconUrl, meIconSize));
+      myMarker && myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
           saveMeIconPrefs();
     });
 
     meSizeUpBtn.addEventListener("click", ()=>{
       if(!meIconUrl) return;
       meIconSize += 5;
-      myMarker && myMarker.setIcon(makeMeImageIcon(meIconUrl, meIconSize));
+      myMarker && myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
           saveMeIconPrefs();
     });
 
     meSizeDownBtn.addEventListener("click", ()=>{
       if(!meIconUrl) return;
       meIconSize = Math.max(5, meIconSize - 5);
-      myMarker && myMarker.setIcon(makeMeImageIcon(meIconUrl, meIconSize));
+      myMarker && myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
           saveMeIconPrefs();
     });
 
@@ -722,6 +827,71 @@
       iconUrlInput.value = entry?.iconUrl || "";
     });
 
+
+
+    // --- Borrar KMZ seleccionado ---
+    async function deleteSelectedKmz(){
+      const label = kmzSelect.value;
+      if(!label) return;
+
+      const idx = kmzLayersList.findIndex(k => k.label === label);
+      if(idx === -1) return;
+
+      const entry = kmzLayersList[idx];
+
+      // 1) Quitar del mapa
+      if(entry.layer && map.hasLayer(entry.layer)){
+        map.removeLayer(entry.layer);
+      }
+
+      // 2) Quitar del control de capas
+      try{
+        entry.layer && layersControl.removeLayer(entry.layer);
+      }catch(e){}
+
+      // 3) Quitar de overlays (por si se usa en el futuro)
+      try{ delete overlays[label]; }catch(e){}
+
+      // 4) Quitar POIs del índice de búsqueda
+      for(let i = poiIndex.length - 1; i >= 0; i--){
+        if(poiIndex[i].kmzLabel === label){
+          poiIndex.splice(i, 1);
+        }
+      }
+
+      // 5) Borrar binario de IndexedDB
+      try{ await idbDeleteKmz(label); }catch(e){}
+
+      // 6) Quitar de la lista y guardar metadatos
+      kmzLayersList.splice(idx, 1);
+      saveKmzMeta();
+
+      // 7) Quitar del selector
+      if(kmzSelect){
+        [...kmzSelect.options].forEach(o=>{
+          if(o.value === label) o.remove();
+        });
+      }
+
+      // 8) Reset UI
+      kmzSelect.value = "";
+      iconUrlInput.value = "";
+      ensureKmzSelectEnabled();
+
+      // Si hay un KMZ seleccionado tras el borrado, muestra su icono actual
+      const newEntry = getKmzEntryByLabel(kmzSelect.value);
+      if(newEntry) iconUrlInput.value = newEntry.iconUrl || "";
+    }
+
+    if(deleteKmzBtn){
+      deleteKmzBtn.addEventListener("click", ()=>{
+        const label = kmzSelect.value;
+        if(!label) return;
+        if(confirm("¿Borrar este KMZ definitivamente?")){
+          deleteSelectedKmz();
+        }
+      });
+    }
 
     async function loadKmzData(fileName, arrayBuffer, meta){
       // Color e icono para ESTE KMZ
