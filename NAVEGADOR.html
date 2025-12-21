@@ -360,6 +360,8 @@
       let myMarker = null;
       let myAccuracyCircle = null;
       let lastLatLng = null;
+      let prevLatLng = null;
+      let lastBearing = 0;
       let firstFix = true;
 
       let meIconUrl = "";
@@ -533,7 +535,22 @@
         mapEl.classList.remove("rotate");
       };
 
-      const clearRoute = () => {
+      
+const toRad = (deg) => (deg * Math.PI) / 180;
+const toDeg = (rad) => (rad * 180) / Math.PI;
+
+const bearingBetween = (from, to) => {
+  if (!from || !to) return NaN;
+  const φ1 = toRad(from.lat), φ2 = toRad(to.lat);
+  const Δλ = toRad(to.lng - from.lng);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  const brng = (toDeg(θ) + 360) % 360; // 0..360
+  return brng;
+};
+
+const clearRoute = () => {
         if (trackGuideLine) {
           map.removeLayer(trackGuideLine);
           trackGuideLine = null;
@@ -823,47 +840,62 @@
       };
 
       const updateMyLocation = (pos) => {
-        const { latitude, longitude, accuracy, heading } = pos.coords;
-        lastLatLng = L.latLng(latitude, longitude);
+  const { latitude, longitude, accuracy, heading } = pos.coords;
 
-        if (!myMarker) {
-          myMarker = L.marker(lastLatLng, { icon: makeMeRotIcon(meIconUrl, meIconSize) }).addTo(map);
-          myAccuracyCircle = L.circle(lastLatLng, { radius: accuracy, weight: 1, fillOpacity: 0.1 }).addTo(map);
-        } else {
-          myMarker.setLatLng(lastLatLng);
-          myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
-          myAccuracyCircle.setLatLng(lastLatLng);
-          myAccuracyCircle.setRadius(accuracy);
-        }
+  const nextLatLng = L.latLng(latitude, longitude);
+  const prev = lastLatLng;
+  prevLatLng = prev;
+  lastLatLng = nextLatLng;
 
-        if (followChk.checked && typeof heading === "number" && isFinite(heading)) {
-          setMapRotationDegrees(heading);
-          setMeBearingDegrees(0);
-        } else {
-          clearMapRotation();
-        }
+  let bearing = (typeof heading === "number" && isFinite(heading)) ? heading : NaN;
 
-        if (firstFix) {
-          map.setView(lastLatLng, 17);
-          firstFix = false;
-        } else if (followChk.checked) {
-          map.panTo(lastLatLng, { animate: true });
-        }
+  if (!isFinite(bearing) && prev) {
+    const movedM = prev.distanceTo(nextLatLng);
+    if (movedM >= 1.5) bearing = bearingBetween(prev, nextLatLng);
+  }
 
-        if (trackGuideLine && trackGuideState?.destLatLng && lastLatLng) {
-          if (trackGuideState.trackLatlngs?.length >= 2) {
-            const tr = trackGuideState.trackLatlngs;
-            const cur = closestPointOnPolyline(tr, lastLatLng);
-            const dst = closestPointOnPolyline(tr, trackGuideState.destLatLng);
-            const seg = (cur && dst) ? extractSubPolyline(tr, cur, dst) : null;
-            if (seg?.length) trackGuideLine.setLatLngs([lastLatLng, cur.closestLatLng, ...seg.slice(1)]);
-          } else {
-            trackGuideLine.setLatLngs([lastLatLng, trackGuideState.destLatLng]);
-          }
+  if (isFinite(bearing)) lastBearing = bearing;
+  else if (isFinite(lastBearing)) bearing = lastBearing;
 
-          if (lastLatLng.distanceTo(trackGuideState.destLatLng) < 12) clearRoute();
-        }
-      };
+  if (!myMarker) {
+    myMarker = L.marker(lastLatLng, { icon: makeMeRotIcon(meIconUrl, meIconSize) }).addTo(map);
+    myAccuracyCircle = L.circle(lastLatLng, { radius: accuracy, weight: 1, fillOpacity: 0.1 }).addTo(map);
+  } else {
+    myMarker.setLatLng(lastLatLng);
+    myMarker.setIcon(makeMeRotIcon(meIconUrl, meIconSize));
+    myAccuracyCircle.setLatLng(lastLatLng);
+    myAccuracyCircle.setRadius(accuracy);
+  }
+
+  if (followChk.checked && isFinite(bearing)) {
+    setMapRotationDegrees(bearing);
+    setMeBearingDegrees(bearing); // cancela la rotación del mapa y deja la flecha/imagen orientada
+  } else {
+    clearMapRotation();
+    setMeBearingDegrees(isFinite(bearing) ? bearing : 0);
+  }
+
+  if (firstFix) {
+    map.setView(lastLatLng, 17);
+    firstFix = false;
+  } else if (followChk.checked) {
+    map.panTo(lastLatLng, { animate: true });
+  }
+
+  if (trackGuideLine && trackGuideState?.destLatLng && lastLatLng) {
+    if (trackGuideState.trackLatlngs?.length >= 2) {
+      const tr = trackGuideState.trackLatlngs;
+      const cur = closestPointOnPolyline(tr, lastLatLng);
+      const dst = closestPointOnPolyline(tr, trackGuideState.destLatLng);
+      const seg = (cur && dst) ? extractSubPolyline(tr, cur, dst) : null;
+      if (seg?.length) trackGuideLine.setLatLngs([lastLatLng, cur.closestLatLng, ...seg.slice(1)]);
+    } else {
+      trackGuideLine.setLatLngs([lastLatLng, trackGuideState.destLatLng]);
+    }
+
+    if (lastLatLng.distanceTo(trackGuideState.destLatLng) < 12) clearRoute();
+  }
+};
 
       const init = async () => {
         try {
@@ -895,12 +927,17 @@
         }
       };
 
-      followChk.addEventListener("change", () => {
-        if (!followChk.checked) {
-          clearMapRotation();
-          setMeBearingDegrees(0);
-        }
-      });
+      
+followChk.addEventListener("change", () => {
+  if (followChk.checked) {
+    if (isFinite(lastBearing)) {
+      setMapRotationDegrees(lastBearing);
+      setMeBearingDegrees(lastBearing);
+    }
+  } else {
+    clearMapRotation();
+  }
+});
 
       hudToggleBtn.addEventListener("click", (ev) => {
         ev.preventDefault();
