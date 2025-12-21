@@ -248,8 +248,11 @@
       transform-origin: 50% 50%;
     }
 
-    #map.rotate .leaflet-map-pane{
+    #map.rotate .map-rotator{
       transform: rotate(var(--map-rot, 0deg)) scale(var(--map-scale, 1));
+    }
+    .map-rotator{
+      position:absolute; inset:0; transform-origin:50% 50%; will-change:transform;
     }
   </style>
 </head>
@@ -351,6 +354,23 @@
 
       const map = L.map("map").setView([40.4168, -3.7038], 6);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      // Wrapper para rotación del mapa sin interferir con los transforms internos de Leaflet
+      const mapRotWrap = (() => {
+        try {
+          const container = map.getContainer();
+          const pane = map.getPane("mapPane");
+          if (!container || !pane || pane.parentElement?.classList?.contains("map-rotator")) {
+            const wrap = document.createElement("div");
+            wrap.className = "map-rotator";
+            // Inserta el wrapper justo antes del pane y lo re-hija dentro
+            pane.parentElement?.insertBefore(wrap, pane);
+            wrap.appendChild(pane);
+            return wrap;
+          }
+          return pane.parentElement;
+        } catch { return null; }
+      })();
+
 
       const overlays = {};
       const layersControl = L.control.layers({}, overlays, { collapsed: false }).addTo(map);
