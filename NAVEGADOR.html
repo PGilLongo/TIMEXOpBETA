@@ -572,8 +572,10 @@
         fetch(sheetsEndpoint, {
           method: "POST",
           mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          // En no-cors NO podemos fijar headers "no simples".
+          // Enviamos JSON como text/plain (el navegador lo hará por defecto) y Apps Script lo puede parsear igual.
+          body: JSON.stringify(payload),
+          keepalive: true
         }).then(() => {
           setSheetsStatus("Enviado");
         }).catch(() => {
