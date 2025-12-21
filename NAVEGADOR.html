@@ -250,6 +250,20 @@
       transform: rotate(var(--map-rot, 0deg)) scale(var(--map-scale, 1));
     }
 
+
+    /* Wrapper para rotar el mapa sin que Leaflet sobrescriba el transform */
+    .map-rotator{
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 50%;
+      will-change: transform;
+      pointer-events: none; /* deja los eventos al mapa interno */
+    }
+    /* El mapa interno debe seguir recibiendo eventos */
+    .map-rotator .leaflet-map-pane{
+      pointer-events: auto;
+    }
+
 </style>
 </head>
 <body>
@@ -319,8 +333,8 @@
       followChk.addEventListener("change", ()=>{
         if(!followChk.checked){
           clearMapRotation();
-          // vuelve a dejar el icono en 0°
           setMeBearingDegrees(0);
+          prevLatLngForBearing = lastLatLng;
         }
       });
     }
@@ -545,6 +559,23 @@
       return best;
     }
 
+    function computeBearingDeg(a, b){
+      // Bearing from a->b in degrees, 0=N, clockwise
+      const lat1 = a.lat * Math.PI/180, lat2 = b.lat * Math.PI/180;
+      const dLon = (b.lng - a.lng) * Math.PI/180;
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+      let brng = Math.atan2(y, x) * 180/Math.PI;
+      brng = (brng + 360) % 360;
+      return brng;
+    }
+
+    function getHeadingFromPosition(pos){
+      const hd = (pos && pos.coords) ? pos.coords.heading : null;
+      if(typeof hd === "number" && isFinite(hd)) return hd;
+      return null;
+    }
+
     function setResultsVisible(v){
       resultsEl.style.display = v ? "block" : "none";
     }
@@ -681,14 +712,42 @@
     const map = L.map("map").setView([40.4168, -3.7038], 6);
 
     // --- Rotación del mapa según heading (cuando "seguirme" está activo) ---
-    const mapEl = document.getElementById("map");
+    const mapContainerEl = map.getContainer();
     let mapRotDeg = 0;      // rotación actual aplicada
     let mapRotTarget = 0;   // rotación objetivo (deg)
     let mapRotRaf = 0;
+    let rotatorEl = null;
 
-    function setMapRotationDegrees(deg){
-      // Para que la dirección de movimiento quede "arriba", giramos el mapa al contrario del heading
-      const d = (typeof deg === "number" && isFinite(deg)) ? deg : 0;
+    function ensureRotator(){
+      if(rotatorEl) return rotatorEl;
+      if(!mapContainerEl) return null;
+      const pane = mapContainerEl.querySelector(".leaflet-map-pane");
+      if(!pane) return null;
+
+      // Crea wrapper y mueve el map-pane dentro, para que Leaflet siga manejando el translate() interno
+      const rot = document.createElement("div");
+      rot.className = "map-rotator";
+      const parent = pane.parentNode;
+      parent.insertBefore(rot, pane);
+      rot.appendChild(pane);
+      rotatorEl = rot;
+      return rotatorEl;
+    }
+
+    function applyRotTransform(){
+      const rot = ensureRotator();
+      if(!rot) return;
+
+      // Escala ligera para evitar esquinas vacías al rotar
+      const abs = Math.abs(mapRotDeg);
+      const scale = abs > 1 ? 1.12 : 1.0;
+
+      rot.style.transform = `rotate(${mapRotDeg}deg) scale(${scale})`;
+    }
+
+    function setMapRotationDegrees(headingDeg){
+      // Para que avances "hacia arriba", giramos el mapa al contrario del heading
+      const d = (typeof headingDeg === "number" && isFinite(headingDeg)) ? headingDeg : 0;
       mapRotTarget = -d;
 
       // Normaliza a [-180,180] para transiciones suaves
@@ -702,23 +761,15 @@
 
     function animateMapRotation(){
       mapRotRaf = 0;
-      // interpolación simple (suave)
       const diff = mapRotTarget - mapRotDeg;
+
       if(Math.abs(diff) < 0.5){
         mapRotDeg = mapRotTarget;
       }else{
         mapRotDeg = mapRotDeg + diff * 0.18;
       }
 
-      if(mapEl){
-        mapEl.classList.toggle("rotate", true);
-
-        // Escala ligera para evitar esquinas vacías al rotar (aprox. para rotaciones habituales)
-        const abs = Math.abs(mapRotDeg);
-        const scale = abs > 1 ? 1.12 : 1.0;
-        mapEl.style.setProperty("--map-rot", `${mapRotDeg}deg`);
-        mapEl.style.setProperty("--map-scale", `${scale}`);
-      }
+      applyRotTransform();
 
       if(Math.abs(mapRotTarget - mapRotDeg) >= 0.5){
         mapRotRaf = requestAnimationFrame(animateMapRotation);
@@ -728,11 +779,8 @@
     function clearMapRotation(){
       mapRotTarget = 0;
       mapRotDeg = 0;
-      if(mapEl){
-        mapEl.style.setProperty("--map-rot", `0deg`);
-        mapEl.style.setProperty("--map-scale", `1`);
-        mapEl.classList.remove("rotate");
-      }
+      applyRotTransform();
+    }
     }
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19
@@ -828,6 +876,8 @@
     let kmzCounter = 1;
 
     let myMarker=null, myAccuracyCircle=null, lastLatLng=null, firstFix=true;
+    let prevLatLngForBearing = null;
+    let lastBearingDeg = 0;
     let meIconUrl = "";
     let meIconSize = 14;
 
@@ -858,14 +908,31 @@
         myAccuracyCircle.setRadius(accuracy);
       }
 
-      // Orientación: si "seguirme" está activo y el dispositivo aporta heading, rota el MAPA para que avances "hacia arriba"
-      const hd = (pos && pos.coords) ? pos.coords.heading : null; // grados (0=norte)
+      // Orientación: si "seguirme" está activo, rota el MAPA para que avances "hacia arriba"
+      // 1) Usa heading nativo si existe
+      // 2) Si no existe (Chrome suele dar null), calcula rumbo por movimiento (prev->actual)
+      let hd = getHeadingFromPosition(pos);
+
+      if(hd == null && prevLatLngForBearing && lastLatLng){
+        // Solo actualiza si te has movido lo suficiente (evita ruido GPS)
+        const moved = prevLatLngForBearing.distanceTo(lastLatLng);
+        if(moved >= 2.5){
+          hd = computeBearingDeg(prevLatLngForBearing, lastLatLng);
+          lastBearingDeg = hd;
+          prevLatLngForBearing = lastLatLng;
+        }else{
+          // Mantén el último rumbo estable
+          hd = lastBearingDeg;
+        }
+      }else if(prevLatLngForBearing == null && lastLatLng){
+        prevLatLngForBearing = lastLatLng;
+      }
+
       if(followChk.checked && typeof hd === "number" && isFinite(hd)){
         setMapRotationDegrees(hd);
         // Con el mapa rotando, dejamos tu icono "mirando arriba"
         setMeBearingDegrees(0);
       }else{
-        // Si no hay heading, no rotamos
         clearMapRotation();
       }
 
