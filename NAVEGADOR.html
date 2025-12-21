@@ -381,11 +381,40 @@
       let myAccuracyCircle = null;
       let lastLatLng = null;
       let prevLatLng = null;
-      let lastBearing = 0;
+      let lastBearing = NaN;
+      let compassBearing = NaN;
+      const posHistory = [];
+      const MAX_HISTORY_MS = 12000; // para calcular rumbo estable
+
       let firstFix = true;
 
       let meIconUrl = "";
       let meIconSize = 14;
+
+
+      // Rumbo por brújula (DeviceOrientation) como fallback (PWA Android/Chrome).
+      // Si no está disponible, simplemente no se usa.
+      (function initCompass() {
+        const handler = (ev) => {
+          let hd = NaN;
+
+          // iOS/Safari: ev.webkitCompassHeading (0..360, norte=0)
+          if (typeof ev.webkitCompassHeading === "number" && isFinite(ev.webkitCompassHeading)) {
+            hd = ev.webkitCompassHeading;
+          } else if (typeof ev.alpha === "number" && isFinite(ev.alpha)) {
+            // Muchos Android: alpha es absoluto cuando ev.absolute === true.
+            if (ev.absolute === true) hd = (360 - ev.alpha) % 360;
+          }
+
+          if (typeof hd === "number" && isFinite(hd)) compassBearing = hd;
+        };
+
+        try {
+          window.addEventListener("deviceorientationabsolute", handler, { passive: true });
+          window.addEventListener("deviceorientation", handler, { passive: true });
+        } catch {}
+      })();
+
 
       let trackGuideLine = null;
       let trackGuideState = null;
@@ -869,13 +898,29 @@ const clearRoute = () => {
 
   let bearing = (typeof heading === "number" && isFinite(heading)) ? heading : NaN;
 
-  if (!isFinite(bearing) && prev) {
-    const movedM = prev.distanceTo(nextLatLng);
-    if (movedM >= 1.5) bearing = bearingBetween(prev, nextLatLng);
+  // Historial corto para calcular rumbo estable por movimiento (mejor que usar solo el último salto)
+  const now = Date.now();
+  posHistory.push({ ll: nextLatLng, t: now });
+  while (posHistory.length && (now - posHistory[0].t) > MAX_HISTORY_MS) posHistory.shift();
+
+  if (!isFinite(bearing)) {
+    // Busca un punto anterior suficientemente separado para calcular un rumbo real y no ruido del GPS
+    let ref = null;
+    for (let i = posHistory.length - 2; i >= 0; i--) {
+      const cand = posHistory[i].ll;
+      const dist = cand.distanceTo(nextLatLng);
+      if (dist >= 2.0) { ref = cand; break; }
+    }
+    if (ref) bearing = bearingBetween(ref, nextLatLng);
+  }
+
+  // Fallback a brújula si no hay heading por GPS ni movimiento suficiente
+  if (!isFinite(bearing) && typeof compassBearing === "number" && isFinite(compassBearing)) {
+    bearing = compassBearing;
   }
 
   if (isFinite(bearing)) lastBearing = bearing;
-  else if (isFinite(lastBearing)) bearing = lastBearing;
+  else if (typeof lastBearing === "number" && isFinite(lastBearing)) bearing = lastBearing;
 
   if (!myMarker) {
     myMarker = L.marker(lastLatLng, { icon: makeMeRotIcon(meIconUrl, meIconSize) }).addTo(map);
