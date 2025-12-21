@@ -447,6 +447,7 @@
 
     // Línea guía por track (KMZ)
     let trackGuideLine = null;
+    let trackGuideState = null; // { trackLatlngs: [..] | null, destLatLng: L.LatLng }
 
     function clearRoute(){
       if(routingControl){
@@ -457,6 +458,7 @@
         map.removeLayer(trackGuideLine);
         trackGuideLine = null;
       }
+      trackGuideState = null;
     }
     clearRouteBtn.addEventListener("click", clearRoute);
 
@@ -575,10 +577,24 @@
 
           // Guiado por track (KMZ): busca la línea más cercana a tu posición y al punto seleccionado
           const best = pickBestTrack(lastLatLng, it.latlng);
+
+          // Guarda estado para ir recortando la línea conforme avanzas
+          trackGuideState = {
+            trackLatlngs: best ? best.track.latlngs : null,
+            destLatLng: it.latlng
+          };
+
           let lineLatLngs = null;
 
           if(best){
-            lineLatLngs = extractSubPolyline(best.track.latlngs, best.from, best.to);
+            // Engancha desde tu posición exacta al punto más cercano del track, y luego sigue el track hasta el destino
+            const cur = closestPointOnPolyline(best.track.latlngs, lastLatLng);
+            const dst = closestPointOnPolyline(best.track.latlngs, it.latlng);
+            const seg = (cur && dst) ? extractSubPolyline(best.track.latlngs, cur, dst) : null;
+
+            if(seg && seg.length){
+              lineLatLngs = [ lastLatLng, cur.closestLatLng, ...seg.slice(1) ];
+            }
           }
 
           // Si no hay tracks, dibuja línea directa como fallback
@@ -858,8 +874,33 @@
       if(firstFix){
         map.setView(lastLatLng,17);
         firstFix=false;
-      }else if(followChk.checked){
+            }else if(followChk.checked){
         map.panTo(lastLatLng, { animate:true });
+      }
+
+      // Recorta la línea guía conforme avanzas: elimina lo ya "pasado"
+      if(trackGuideLine && trackGuideState && lastLatLng){
+        // Si hay track, usa el más cercano sobre el track; si no, recorta la línea directa
+        if(trackGuideState.trackLatlngs && trackGuideState.trackLatlngs.length >= 2){
+          const tr = trackGuideState.trackLatlngs;
+          const cur = closestPointOnPolyline(tr, lastLatLng);
+          const dst = closestPointOnPolyline(tr, trackGuideState.destLatLng);
+          const seg = (cur && dst) ? extractSubPolyline(tr, cur, dst) : null;
+
+          if(seg && seg.length){
+            const newLatLngs = [ lastLatLng, cur.closestLatLng, ...seg.slice(1) ];
+            trackGuideLine.setLatLngs(newLatLngs);
+          }
+        }else if(trackGuideState.destLatLng){
+          trackGuideLine.setLatLngs([ lastLatLng, trackGuideState.destLatLng ]);
+        }
+
+        // Si llegas muy cerca del destino, quita la guía
+        try{
+          if(trackGuideState.destLatLng && lastLatLng.distanceTo(trackGuideState.destLatLng) < 12){
+            clearRoute();
+          }
+        }catch(e){}
       }
     }
 
