@@ -44,6 +44,7 @@
 <body>
   <div class="split">
     <iframe
+      id="timexFrame"
       class="left"
       src="PDF TIMEX.html"
       title="TIMEX"
@@ -61,6 +62,7 @@
     ></iframe>
   </div>
 
+  <!-- FULLSCREEN -->
   <script>
     function goFullscreen() {
       const el = document.documentElement;
@@ -80,8 +82,8 @@
     });
   </script>
 
+  <!-- PWA -->
   <script>
-    // PWA
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
@@ -90,14 +92,19 @@
     }
   </script>
 
+  <!-- COORDENADAS + ESTADO TIMEX -> GOOGLE SHEET -->
   <script>
-    // ===== ENVÍO DE UBICACIÓN CADA 5s A GOOGLE SHEET (vía WebApp Apps Script) =====
     (function () {
+      // ===== CONFIG =====
       const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzVVyuEej2L1WUwnMuLmpYGEzuHuVk9Z9k9fDSJsRVkfLsFj78zItZkWSW3PZwnFLSjcQ/exec";
-      const TOKEN = "1234";           // debe coincidir con Apps Script
-      const INTERVAL_MS = 5000;
+      const TOKEN = "1234";
 
-      // ID persistente por navegador
+      const GPS_INTERVAL_MS = 5000;       // coordenadas cada 5s
+      const STATUS_CELL = "A4";           // estado TIMEX -> A4
+      const STATUS_POLL_MS = 600;         // lectura rápida para enganchar el observer
+      const ESTADOS = ["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN", "DISPONIBLES"];
+
+      // ===== DEVICE ID persistente =====
       const DEVICE_ID_KEY = "coorvisor_device_id";
       const deviceId = (() => {
         try {
@@ -113,10 +120,8 @@
         }
       })();
 
-      let timer = null;
-
+      // ===== envío silencioso sin CORS =====
       function sendGET(params) {
-        // Envío silencioso sin CORS
         const qs = new URLSearchParams(params).toString();
         const url = WEBAPP_URL + (WEBAPP_URL.includes("?") ? "&" : "?") + qs;
         const img = new Image();
@@ -124,10 +129,15 @@
         img.src = url;
       }
 
-      function tick() {
+      // =========================
+      // 1) GPS -> Sheet (como ya tenías)
+      // =========================
+      let gpsTimer = null;
+
+      function gpsTick() {
         if (!("geolocation" in navigator)) {
           console.warn("Geolocalización no soportada.");
-          stop();
+          gpsStop();
           return;
         }
 
@@ -154,194 +164,135 @@
         );
       }
 
-      function start() {
-        if (timer) return;
-        tick();
-        timer = setInterval(tick, INTERVAL_MS);
+      function gpsStart() {
+        if (gpsTimer) return;
+        gpsTick();
+        gpsTimer = setInterval(gpsTick, GPS_INTERVAL_MS);
       }
 
-      function stop() {
-        if (!timer) return;
-        clearInterval(timer);
-        timer = null;
+      function gpsStop() {
+        if (!gpsTimer) return;
+        clearInterval(gpsTimer);
+        gpsTimer = null;
       }
 
-      document.addEventListener("DOMContentLoaded", start);
-      window.CoorvisorLocation = { start, stop, deviceId };
-    })();
-  </script>
-</body>
-</html>
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-    }
+      // =========================
+      // 2) ESTADO TIMEX (desde index leyendo iframe) -> Sheet A4
+      // =========================
+      function isVisible(el) {
+        if (!el || !(el instanceof el.ownerDocument.defaultView.Element)) return false;
+        const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }
 
-    .left {
-      box-shadow: 1px 0 0 rgba(255,255,255,.12) inset;
-    }
-  </style>
-</head>
+      function normalizeText(s) {
+        return (s || "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toUpperCase();
+      }
 
-<body>
-  <div class="split">
-    <iframe
-      class="left"
-      src="PDF TIMEX.html"
-      title="TIMEX"
-      loading="eager"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-geolocation"
-      allow="geolocation *"
-    ></iframe>
+      // Busca el “chip” por texto: el elemento visible más pequeño cuyo texto sea exactamente un estado
+      function findStateElement(doc) {
+        const all = Array.from(doc.querySelectorAll("body *"));
+        let best = null;
 
-    <iframe
-      src="NAVEGADOR.html"
-      title="NAVEGADOR"
-      loading="eager"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-geolocation"
-      allow="geolocation *"
-    ></iframe>
-  </div>
+        for (const el of all) {
+          if (!isVisible(el)) continue;
 
-  <script>
-    function goFullscreen() {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
-    }
+          const txt = normalizeText(el.textContent);
+          if (!ESTADOS.includes(txt)) continue;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      goFullscreen();
-      setTimeout(goFullscreen, 500);
-      setTimeout(goFullscreen, 1500);
-    });
+          const r = el.getBoundingClientRect();
+          const area = r.width * r.height;
 
-    document.addEventListener("fullscreenchange", () => {
-      if (!document.fullscreenElement) setTimeout(goFullscreen, 300);
-    });
-  </script>
-
-  <script>
-    // PWA
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
-          .catch((err) => console.warn("SW register error:", err));
-      });
-    }
-  </script>
-
-
-  <script>
-    // Envío de ubicación cada 5 segundos al Google Sheet (celda A2)
-    // WebApp: https://script.google.com/macros/s/AKfycbzmwz0jzIPFmnjOEUl3eCy2EuXw1GtaKtSxkWcPT44soU2frtkghIUpBJ5bDv76vA1wQQ/exec
-    (function () {
-      const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzmwz0jzIPFmnjOEUl3eCy2EuXw1GtaKtSxkWcPT44soU2frtkghIUpBJ5bDv76vA1wQQ/exec";
-      const INTERVAL_MS = 5000;
-      const TARGET_CELL = "A2"; // la celda seleccionada en la captura
-
-      // ID persistente por dispositivo/navegador (para poder identificarlo en el Sheet si lo deseas)
-      const DEVICE_ID_KEY = "coorvisor_device_id";
-      const deviceId = (function() {
-        try {
-          let id = localStorage.getItem(DEVICE_ID_KEY);
-          if (!id) {
-            id = (crypto && crypto.randomUUID) ? crypto.randomUUID() :
-                 ("id-" + Math.random().toString(16).slice(2) + Date.now().toString(16));
-            localStorage.setItem(DEVICE_ID_KEY, id);
-          }
-          return id;
-        } catch (e) {
-          return "unknown";
+          if (!best || area < best.area) best = { el, area };
         }
-      })();
-
-      let timer = null;
-
-      function sendToSheet(payload) {
-        // Usamos Image para evitar problemas CORS (no necesitamos leer la respuesta).
-        const qs = new URLSearchParams(payload).toString();
-        const url = WEBAPP_URL + (WEBAPP_URL.includes("?") ? "&" : "?") + qs;
-        const img = new Image();
-        img.referrerPolicy = "no-referrer";
-        img.src = url;
+        return best ? best.el : null;
       }
 
-      function formatLatLng(lat, lng) {
-        // "lat,lng" con 6 decimales (suficiente precisión)
-        const la = (typeof lat === "number") ? lat.toFixed(6) : "";
-        const ln = (typeof lng === "number") ? lng.toFixed(6) : "";
-        return `${la},${ln}`;
+      let statusObserver = null;
+      let lastState = "";
+
+      function sendStateToSheet(state, detail) {
+        sendGET({
+          token: TOKEN,
+          cell: STATUS_CELL,
+          value: state,
+          deviceId: deviceId,
+          ts: new Date().toISOString(),
+          detail: detail || ""
+        });
       }
 
-      function tick() {
-        if (!("geolocation" in navigator)) {
-          console.warn("Geolocalización no soportada por este navegador.");
-          stop();
+      function hookTimexState() {
+        const frame = document.getElementById("timexFrame");
+        if (!frame) {
+          console.warn("No existe #timexFrame");
           return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const c = pos.coords || {};
-            const nowIso = new Date().toISOString();
-
-            // Valor principal para la celda: "lat,lng"
-            const value = formatLatLng(c.latitude, c.longitude);
-
-            // Enviamos también metadatos útiles (puedes ignorarlos en Apps Script si no los necesitas)
-            sendToSheet({
-              cell: TARGET_CELL,
-              value,
-              lat: c.latitude ?? "",
-              lng: c.longitude ?? "",
-              accuracy: c.accuracy ?? "",
-              altitude: c.altitude ?? "",
-              heading: c.heading ?? "",
-              speed: c.speed ?? "",
-              timestamp: pos.timestamp ?? "",
-              iso: nowIso,
-              deviceId,
-              ua: navigator.userAgent
-            });
-          },
-          (err) => {
-            console.warn("Error obteniendo ubicación:", err);
-            // Opcional: reportar error al sheet (comentado por defecto)
-            // sendToSheet({ cell: TARGET_CELL, value: "ERROR: " + (err && err.message ? err.message : err), deviceId, iso: new Date().toISOString() });
-          },
-          {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 4000
+        function tryAttachObserver() {
+          let doc;
+          try {
+            doc = frame.contentDocument || frame.contentWindow?.document;
+          } catch (e) {
+            console.warn("No puedo acceder al DOM del iframe TIMEX (no same-origin o bloqueado).", e);
+            return;
           }
-        );
+
+          if (!doc || !doc.body) return;
+
+          const stateEl = findStateElement(doc);
+          if (!stateEl) {
+            // todavía no renderizó el chip, reintentar
+            setTimeout(tryAttachObserver, STATUS_POLL_MS);
+            return;
+          }
+
+          const readAndMaybeSend = () => {
+            const currentEl = findStateElement(doc) || stateEl;
+            const txt = normalizeText(currentEl.textContent);
+
+            if (!ESTADOS.includes(txt)) return;
+            if (txt === lastState) return;
+
+            lastState = txt;
+            sendStateToSheet(txt, "timex");
+            // console.log("[TIMEX estado]", txt);
+          };
+
+          // lectura inicial
+          readAndMaybeSend();
+
+          // observa cambios en el body (si el chip cambia o se re-renderiza)
+          if (statusObserver) statusObserver.disconnect();
+          statusObserver = new MutationObserver(() => readAndMaybeSend());
+          statusObserver.observe(doc.body, { childList: true, subtree: true, characterData: true });
+
+          console.log("Rastreo de estado TIMEX activo.");
+        }
+
+        frame.addEventListener("load", tryAttachObserver);
+        // por si ya estaba cargado
+        setTimeout(tryAttachObserver, 800);
+        setTimeout(tryAttachObserver, 2000);
       }
 
-      function start() {
-        if (timer) return;
-        // Primer envío inmediato + luego cada 5s
-        tick();
-        timer = setInterval(tick, INTERVAL_MS);
-      }
-
-      function stop() {
-        if (!timer) return;
-        clearInterval(timer);
-        timer = null;
-      }
-
-      // Iniciar tras interacción del usuario si el navegador lo exige para permisos
+      // ===== INICIO =====
       document.addEventListener("DOMContentLoaded", () => {
-        start();
+        gpsStart();
+        hookTimexState();
       });
 
       // Exponer para depuración
-      window.CoorvisorLocation = { start, stop, deviceId };
+      window.Coorvisor = {
+        gpsStart, gpsStop,
+        deviceId
+      };
     })();
   </script>
-
 </body>
 </html>
