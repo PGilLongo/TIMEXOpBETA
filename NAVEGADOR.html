@@ -417,19 +417,109 @@
     // { name, latlng, marker, kmzLabel }
     const poiIndex = [];
 
+    // Índice de tracks/paths por KMZ
+    // { kmzLabel, latlngs: [L.LatLng, ...] }  (para LineString) y MultiLineString como múltiples entradas
+    const trackIndex = [];
+
     // Ruta actual (Leaflet Routing Machine)
     let routingControl = null;
+
+    // Línea guía por track (KMZ)
+    let trackGuideLine = null;
 
     function clearRoute(){
       if(routingControl){
         map.removeControl(routingControl);
         routingControl = null;
       }
+      if(trackGuideLine){
+        map.removeLayer(trackGuideLine);
+        trackGuideLine = null;
+      }
     }
     clearRouteBtn.addEventListener("click", clearRoute);
 
     function normalize(s){
       return (s ?? "").toString().trim();
+    }
+
+    // --- Geometría para "guiado por track" ---
+    function proj(ll){
+      // Proyección a coordenadas planas (EPSG:3857) usando el CRS del mapa
+      return map.options.crs.project(ll);
+    }
+
+    function closestPointOnSegment(P, A, B){
+      const ax=A.x, ay=A.y, bx=B.x, by=B.y, px=P.x, py=P.y;
+      const abx = bx-ax, aby = by-ay;
+      const apx = px-ax, apy = py-ay;
+      const ab2 = abx*abx + aby*aby;
+      let t = ab2 ? (apx*abx + apy*aby)/ab2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      return { x: ax + t*abx, y: ay + t*aby, t };
+    }
+
+    function closestPointOnPolyline(latlngs, targetLatLng){
+      // Devuelve: { idx, t, closestLatLng, distMeters }
+      if(!latlngs || latlngs.length < 2) return null;
+      const P = proj(targetLatLng);
+      let best = null;
+      for(let i=0;i<latlngs.length-1;i++){
+        const A = proj(latlngs[i]);
+        const B = proj(latlngs[i+1]);
+        const cp = closestPointOnSegment(P, A, B);
+        const dx = P.x - cp.x, dy = P.y - cp.y;
+        const d = Math.hypot(dx, dy);
+        if(!best || d < best.d){
+          best = { i, t: cp.t, x: cp.x, y: cp.y, d };
+        }
+      }
+      if(!best) return null;
+      const ll = map.options.crs.unproject(L.point(best.x, best.y));
+      // Distancia en metros aproximada (en EPSG:3857 ya está en metros)
+      return { idx: best.i, t: best.t, closestLatLng: ll, distMeters: best.d };
+    }
+
+    function extractSubPolyline(latlngs, a, b){
+      // a/b: { idx, t, closestLatLng }
+      if(!latlngs || latlngs.length < 2 || !a || !b) return null;
+
+      // Ordenar en el sentido del polyline (a -> b)
+      const aPos = a.idx + a.t;
+      const bPos = b.idx + b.t;
+
+      const forward = aPos <= bPos;
+      const start = forward ? a : b;
+      const end   = forward ? b : a;
+
+      const out = [];
+      out.push(start.closestLatLng);
+
+      // Añade vértices intermedios completos
+      for(let i = start.idx + 1; i <= end.idx; i++){
+        out.push(latlngs[i]);
+      }
+
+      // Reemplaza último por el punto final proyectado
+      out[out.length - 1] = end.closestLatLng;
+
+      return forward ? out : out.reverse();
+    }
+
+    function pickBestTrack(fromLatLng, toLatLng){
+      // Selecciona el track cuya suma de distancias a ambos puntos sea mínima
+      if(!trackIndex.length) return null;
+      let best = null;
+      for(const tr of trackIndex){
+        const c1 = closestPointOnPolyline(tr.latlngs, fromLatLng);
+        const c2 = closestPointOnPolyline(tr.latlngs, toLatLng);
+        if(!c1 || !c2) continue;
+        const score = c1.distMeters + c2.distMeters;
+        if(!best || score < best.score){
+          best = { track: tr, from: c1, to: c2, score };
+        }
+      }
+      return best;
     }
 
     function setResultsVisible(v){
@@ -461,15 +551,30 @@
           }
 
           clearRoute();
-          routingControl = L.Routing.control({
-            waypoints: [ lastLatLng, it.latlng ],
-            addWaypoints: false,
-            draggableWaypoints: false,
-            routeWhileDragging: false,
-            show: false,
-            fitSelectedRoutes: true,
-            lineOptions: { addWaypoints:false }
+
+          // Guiado por track (KMZ): busca la línea más cercana a tu posición y al punto seleccionado
+          const best = pickBestTrack(lastLatLng, it.latlng);
+          let lineLatLngs = null;
+
+          if(best){
+            lineLatLngs = extractSubPolyline(best.track.latlngs, best.from, best.to);
+          }
+
+          // Si no hay tracks, dibuja línea directa como fallback
+          if(!lineLatLngs){
+            lineLatLngs = [ lastLatLng, it.latlng ];
+          }
+
+          trackGuideLine = L.polyline(lineLatLngs, {
+            weight: 6,
+            opacity: 0.85
           }).addTo(map);
+
+          // Ajusta vista al tramo (sin cambiar la lógica de follow)
+          try{
+            const b = trackGuideLine.getBounds && trackGuideLine.getBounds();
+            b && b.isValid && b.isValid() && map.fitBounds(b.pad(0.2));
+          }catch(e){}
 
           
         });
@@ -859,6 +964,14 @@
         }
       }
 
+
+      // 4b) Quitar tracks del índice
+      for(let i = trackIndex.length - 1; i >= 0; i--){
+        if(trackIndex[i].kmzLabel === label){
+          trackIndex.splice(i, 1);
+        }
+      }
+
       // 5) Borrar binario de IndexedDB
       try{ await idbDeleteKmz(label); }catch(e){}
 
@@ -915,6 +1028,28 @@
 
       const dom = new DOMParser().parseFromString(await zip.files[kmlName].async("text"), "text/xml");
       const geojson = toGeoJSON.kml(dom);
+
+      // Indexar tracks/paths (LineString / MultiLineString) para guiado visual
+      try{
+        const feats = (geojson && geojson.features) ? geojson.features : [];
+        for(const f of feats){
+          const g = f && f.geometry;
+          if(!g) continue;
+          if(g.type === "LineString" && Array.isArray(g.coordinates)){
+            const latlngs = g.coordinates.map(c => L.latLng(c[1], c[0]));
+            if(latlngs.length >= 2){
+              trackIndex.push({ kmzLabel: entry.label || "", latlngs });
+            }
+          }else if(g.type === "MultiLineString" && Array.isArray(g.coordinates)){
+            for(const part of g.coordinates){
+              const latlngs = (part||[]).map(c => L.latLng(c[1], c[0]));
+              if(latlngs.length >= 2){
+                trackIndex.push({ kmzLabel: entry.label || "", latlngs });
+              }
+            }
+          }
+        }
+      }catch(e){}
 
       // Si hay icono guardado, úsalo desde el primer render
       const pointIcon = entry.iconUrl ? makeKmzImageIcon(entry.iconUrl, entry.iconSize) : kmzDotIcon;
