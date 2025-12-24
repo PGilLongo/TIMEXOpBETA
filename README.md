@@ -8,5 +8,8 @@ Instalar como app nativa
 - Android : menú ⋮ → Instalar aplicación / Añadir a pantalla de inicio.
 - iOS: botón Compartir → Añadir a pantalla de inicio.
 
+VISOR TIMEX (Navegador)
+Web para la monitorización de los recursos con TIMEX activo.
+
 Notas
 App en desarrollo para la implementación en servicios de emergencias.
