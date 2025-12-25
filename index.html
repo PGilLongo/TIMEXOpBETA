@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>TIMEX + Navegador</title>
-
   <style>
     html, body {
       height: 100%;
@@ -60,7 +59,6 @@
     ></iframe>
   </div>
 
-  <!-- FULLSCREEN -->
   <script>
     function goFullscreen() {
       const el = document.documentElement;
@@ -81,174 +79,148 @@
   </script>
 
   <script>
-  (function () {
-    // ===== CONFIG =====
-    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycby9LjuP_t_d9TPOmSvZ7l5flFaOenmdF5Gb0QEX8ovY1M4GNDBc6a7i8TCFb-9et-NQOw/exec";
-    const TOKEN = "1234";
+    (function () {
+      const APP_URL = "https://script.google.com/macros/s/AKfycby9LjuP_t_d9TPOmSvZ7l5flFaOenmdF5Gb0QEX8ovY1M4GNDBc6a7i8TCFb-9et-NQOw/exec";
+      const TOKEN = "1234";
+      const GPS_INTERVAL = 5000;
+      const STATES = ["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN", "DISPONIBLES"];
+      const STATE_CELL = "A4";
 
-    const GPS_INTERVAL_MS = 5000;   // envío GPS cada 5s
-    const ESTADOS = ["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN", "DISPONIBLES"];
-    const STATE_CELL = "A4";        // estado -> A4
-
-    // ===== Envío silencioso (sin CORS) =====
-    function sendGET(params) {
-      const qs = new URLSearchParams(params).toString();
-      const url = WEBAPP_URL + (WEBAPP_URL.includes("?") ? "&" : "?") + qs;
-      const img = new Image();
-      img.referrerPolicy = "no-referrer";
-      img.src = url;
-    }
-
-    // =========================
-    // 1) GPS -> A2 (lat, lng)
-    // Apps Script: mode=writeLoc
-    // =========================
-    let gpsTimer = null;
-
-    function gpsTick() {
-      if (!("geolocation" in navigator)) {
-        console.warn("Geolocalización no soportada.");
-        gpsStop();
-        return;
+      function send(params) {
+        const qs = new URLSearchParams(params).toString();
+        const url = APP_URL + (APP_URL.includes("?") ? "&" : "?") + qs;
+        const img = new Image();
+        img.referrerPolicy = "no-referrer";
+        img.src = url;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const c = pos.coords || {};
-          sendGET({
-            mode: "writeLoc",
-            token: TOKEN,
-            lat: c.latitude ?? "",
-            lng: c.longitude ?? ""
-          });
-          // console.log("📍 GPS enviado");
-        },
-        (err) => {
-          console.warn("Error obteniendo ubicación:", err);
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 8000
-        }
-      );
-    }
+      let gpsTimer = null;
 
-    function gpsStart() {
-      if (gpsTimer) return;
-      gpsTick();
-      gpsTimer = setInterval(gpsTick, GPS_INTERVAL_MS);
-    }
-
-    function gpsStop() {
-      if (!gpsTimer) return;
-      clearInterval(gpsTimer);
-      gpsTimer = null;
-    }
-
-    // =========================
-    // 2) ESTADO TIMEX -> A4
-    // Apps Script: mode=write (cell/value)
-    // =========================
-    function isVisible(el) {
-      if (!el || !(el instanceof el.ownerDocument.defaultView.Element)) return false;
-      const cs = el.ownerDocument.defaultView.getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
-      const r = el.getBoundingClientRect();
-      return r.width > 0 && r.height > 0;
-    }
-
-    function normalizeText(s) {
-      return (s || "").replace(/\s+/g, " ").trim().toUpperCase();
-    }
-
-    // “chip” más pequeño visible cuyo texto sea uno de los estados
-    function findStateElement(doc) {
-      const all = Array.from(doc.querySelectorAll("body *"));
-      let best = null;
-
-      for (const el of all) {
-        if (!isVisible(el)) continue;
-
-        const txt = normalizeText(el.textContent);
-        if (!ESTADOS.includes(txt)) continue;
-
-        const r = el.getBoundingClientRect();
-        const area = r.width * r.height;
-
-        if (!best || area < best.area) best = { el, area };
-      }
-      return best ? best.el : null;
-    }
-
-    let statusObserver = null;
-    let lastState = "";
-
-    function sendStateToSheet(state) {
-      sendGET({
-        mode: "write",
-        token: TOKEN,
-        cell: STATE_CELL,
-        value: state
-      });
-      // console.log("🔘 Estado enviado:", state);
-    }
-
-    function hookTimexState() {
-      const frame = document.getElementById("timexFrame");
-      if (!frame) {
-        console.warn("No existe #timexFrame");
-        return;
-      }
-
-      function tryAttachObserver() {
-        let doc;
-        try {
-          doc = frame.contentDocument || frame.contentWindow?.document;
-        } catch (e) {
-          console.warn("No puedo acceder al DOM del iframe TIMEX (no same-origin o bloqueado).", e);
+      function gpsTick() {
+        if (!("geolocation" in navigator)) {
+          gpsStop();
           return;
         }
 
-        if (!doc || !doc.body) return;
-
-        const readAndMaybeSend = () => {
-          const el = findStateElement(doc);
-          if (!el) return;
-
-          const txt = normalizeText(el.textContent);
-          if (!ESTADOS.includes(txt)) return;
-          if (txt === lastState) return;
-
-          lastState = txt;
-          sendStateToSheet(txt);
-        };
-
-        // lectura inicial
-        readAndMaybeSend();
-
-        // observa cambios
-        if (statusObserver) statusObserver.disconnect();
-        statusObserver = new MutationObserver(readAndMaybeSend);
-        statusObserver.observe(doc.body, { childList: true, subtree: true, characterData: true });
-
-        console.log("Rastreo de estado TIMEX activo.");
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const c = pos.coords || {};
+            send({
+              mode: "writeLoc",
+              token: TOKEN,
+              lat: c.latitude ?? "",
+              lng: c.longitude ?? ""
+            });
+          },
+          () => {},
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 8000
+          }
+        );
       }
 
-      frame.addEventListener("load", tryAttachObserver);
-      setTimeout(tryAttachObserver, 800);
-      setTimeout(tryAttachObserver, 2000);
-    }
+      function gpsStart() {
+        if (gpsTimer) return;
+        gpsTick();
+        gpsTimer = setInterval(gpsTick, GPS_INTERVAL);
+      }
 
-    // ===== INICIO =====
-    document.addEventListener("DOMContentLoaded", () => {
-      gpsStart();
-      hookTimexState();
-    });
+      function gpsStop() {
+        if (!gpsTimer) return;
+        clearInterval(gpsTimer);
+        gpsTimer = null;
+      }
 
-    // debug
-    window.Coorvisor = { gpsStart, gpsStop };
-  })();
+      function isVisible(el) {
+        if (!el || !(el instanceof el.ownerDocument.defaultView.Element)) return false;
+        const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }
+
+      function norm(s) {
+        return (s || "").replace(/\s+/g, " ").trim().toUpperCase();
+      }
+
+      function findStateEl(doc) {
+        const all = Array.from(doc.querySelectorAll("body *"));
+        let best = null;
+
+        for (const el of all) {
+          if (!isVisible(el)) continue;
+
+          const txt = norm(el.textContent);
+          if (!STATES.includes(txt)) continue;
+
+          const r = el.getBoundingClientRect();
+          const area = r.width * r.height;
+
+          if (!best || area < best.area) best = { el, area };
+        }
+        return best ? best.el : null;
+      }
+
+      let observer = null;
+      let lastState = "";
+
+      function sendState(state) {
+        send({
+          mode: "write",
+          token: TOKEN,
+          cell: STATE_CELL,
+          value: state
+        });
+      }
+
+      function hookTimex() {
+        const frame = document.getElementById("timexFrame");
+        if (!frame) return;
+
+        function attach() {
+          let doc;
+          try {
+            doc = frame.contentDocument || frame.contentWindow?.document;
+          } catch (e) {
+            return;
+          }
+
+          if (!doc || !doc.body) return;
+
+          const read = () => {
+            const el = findStateEl(doc);
+            if (!el) return;
+
+            const txt = norm(el.textContent);
+            if (!STATES.includes(txt)) return;
+            if (txt === lastState) return;
+
+            lastState = txt;
+            sendState(txt);
+          };
+
+          read();
+
+          if (observer) observer.disconnect();
+          observer = new MutationObserver(read);
+          observer.observe(doc.body, { childList: true, subtree: true, characterData: true });
+        }
+
+        frame.addEventListener("load", attach);
+        setTimeout(attach, 800);
+        setTimeout(attach, 2000);
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        gpsStart();
+        hookTimex();
+      });
+
+      window.gpsStart = gpsStart;
+      window.gpsStop = gpsStop;
+    })();
   </script>
 </body>
 </html>
