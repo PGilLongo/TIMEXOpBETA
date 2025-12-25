@@ -1,7 +1,5 @@
-/* TIMEX PWA Service Worker (scope-safe: works in GitHub Pages or any subfolder) */
+/* :contentReference[oaicite:0]{index=0} */
 const CACHE_NAME = "timex-pwa-v4";
-
-// Listado en rutas RELATIVAS al scope del Service Worker
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,24 +10,26 @@ const ASSETS = [
   "./icons/icon-512.png"
 ];
 
-function abs(url) {
-  return new URL(url, self.registration.scope).toString();
-}
+const toAbs = (path) => new URL(path, self.registration.scope).toString();
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS.map(abs)))
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.addAll(ASSETS.map(toAbs));
+      await self.skipWaiting();
+    })()
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
-    )
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -37,28 +37,33 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-
-  // Solo gestionamos recursos dentro del mismo origen y dentro de nuestro scope
   if (url.origin !== self.location.origin) return;
   if (!url.href.startsWith(self.registration.scope)) return;
 
-  // Navegación: si estás offline, devuelve index.html
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).catch(() => caches.match(abs("./index.html")))
+      (async () => {
+        try {
+          return await fetch(req);
+        } catch {
+          return (await caches.match(toAbs("./index.html"))) || Response.error();
+        }
+      })()
     );
     return;
   }
 
   event.respondWith(
-    caches.match(req).then((cached) => {
+    (async () => {
+      const cached = await caches.match(req);
       if (cached) return cached;
 
-      return fetch(req).then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-        return res;
-      });
-    })
+      const res = await fetch(req);
+      if (res && res.ok && res.type === "basic") {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(req, res.clone()).catch(() => {});
+      }
+      return res;
+    })()
   );
 });

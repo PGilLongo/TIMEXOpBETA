@@ -1,22 +1,21 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>TIMEX + Navegador</title>
   <style>
     :root{
-      color-scheme: dark;
-      --w95-desktop:#000000;
+      color-scheme:dark;
+      --w95-desktop:#000;
       --w95-face:#c0c0c0;
       --w95-shadow:#808080;
       --w95-dark:#404040;
-      --w95-hilite:#ffffff;
+      --w95-hilite:#fff;
       --w95-title:#000080;
-      --w95-title-text:#ffffff;
-      --w95-text:#000000;
+      --w95-title-text:#fff;
+      --w95-text:#000;
     }
-
     html,body{
       height:100%;
       width:100%;
@@ -26,7 +25,6 @@
       background:var(--w95-desktop);
       font-family:"MS Sans Serif",Tahoma,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     }
-
     body{
       position:fixed;
       inset:0;
@@ -37,7 +35,6 @@
       -moz-osx-font-smoothing:auto;
       text-rendering:optimizeSpeed;
     }
-
     .split{
       height:100vh;
       width:100vw;
@@ -47,7 +44,6 @@
       padding:10px;
       box-sizing:border-box;
     }
-
     .window{
       background:var(--w95-face);
       color:var(--w95-text);
@@ -61,7 +57,6 @@
       min-width:0;
       min-height:0;
     }
-
     .titlebar{
       height:22px;
       display:flex;
@@ -77,7 +72,6 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
-
     .content{
       position:relative;
       min-width:0;
@@ -86,7 +80,6 @@
       padding:6px;
       box-sizing:border-box;
     }
-
     .sunken{
       width:100%;
       height:100%;
@@ -99,7 +92,6 @@
       overflow:hidden;
       box-sizing:border-box;
     }
-
     iframe{
       width:100%;
       height:100%;
@@ -107,17 +99,43 @@
       display:block;
       background:#000;
     }
-
     @media (max-width:900px){
-      .split{
-        grid-template-columns:1fr;
-        grid-template-rows:1fr 1fr;
-      }
+      .split{grid-template-columns:1fr;grid-template-rows:1fr 1fr;}
+    }
+    #fsPrompt{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.85);
+      color:#fff;
+      z-index:9999;
+      text-align:center;
+      padding:24px;
+      box-sizing:border-box;
+      font-size:18px;
+      line-height:1.2;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+    }
+    #fsPrompt > div{max-width:520px}
+    #fsPrompt .small{
+      display:block;
+      margin-top:10px;
+      font-size:13px;
+      opacity:.85;
     }
   </style>
 </head>
-
 <body>
+  <div id="fsPrompt" role="button" aria-label="Activar pantalla completa" tabindex="0">
+    <div>
+      Toca para activar pantalla completa
+      <span class="small">Si tu navegador lo permite, entrará automáticamente al tocar.</span>
+    </div>
+  </div>
+
   <div class="split">
     <section class="window" aria-label="Ventana TIMEX">
       <div class="titlebar">TIMEX</div>
@@ -161,120 +179,146 @@
       const STATES = new Set(["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN", "DISPONIBLES"]);
       const STATE_CELL = "A4";
 
-      const safeTimeout = (fn, ms) => window.setTimeout(fn, ms);
-      const isElement = (v) => v && v.nodeType === 1;
+      const fsPrompt = document.getElementById("fsPrompt");
+      const timexFrame = document.getElementById("timexFrame");
 
-      function send(params) {
+      const delay = (fn, ms) => window.setTimeout(fn, ms);
+
+      const send = (params) => {
         const qs = new URLSearchParams(params).toString();
         const url = APP_URL + (APP_URL.includes("?") ? "&" : "?") + qs;
         const img = new Image();
         img.referrerPolicy = "no-referrer";
         img.src = url;
-      }
+      };
 
-      function goFullscreen() {
-        const el = document.documentElement;
-        try {
-          if (document.fullscreenElement) return;
-          if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-          else if (el.msRequestFullscreen) el.msRequestFullscreen();
-        } catch (_) {}
-      }
+      const FS = (() => {
+        const d = document;
+        const root = document.documentElement;
 
-      function scheduleFullscreenAttempts() {
-        goFullscreen();
-        safeTimeout(goFullscreen, 500);
-        safeTimeout(goFullscreen, 1500);
-      }
+        const enabled = () =>
+          !!(d.fullscreenEnabled || d.webkitFullscreenEnabled || d.msFullscreenEnabled ||
+             root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen);
+
+        const isOn = () =>
+          !!(d.fullscreenElement || d.webkitFullscreenElement || d.msFullscreenElement);
+
+        const request = () => {
+          const el = root;
+          try {
+            if (el.requestFullscreen) return el.requestFullscreen();
+            if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+            if (el.msRequestFullscreen) return el.msRequestFullscreen();
+          } catch (_) {}
+          return null;
+        };
+
+        return { enabled, isOn, request };
+      })();
+
+      const showPrompt = () => { if (fsPrompt) fsPrompt.style.display = "flex"; };
+      const hidePrompt = () => { if (fsPrompt) fsPrompt.style.display = "none"; };
+
+      const tryFullscreen = (showIfFail) => {
+        if (FS.isOn()) { hidePrompt(); return; }
+        if (!FS.enabled()) { if (showIfFail) showPrompt(); return; }
+        const p = FS.request();
+        if (p && typeof p.then === "function") {
+          p.then(hidePrompt).catch(() => { if (showIfFail) showPrompt(); });
+        } else {
+          delay(() => { if (FS.isOn()) hidePrompt(); else if (showIfFail) showPrompt(); }, 200);
+        }
+      };
+
+      const pushFullscreen = (showIfFail) => {
+        tryFullscreen(false);
+        delay(() => tryFullscreen(false), 250);
+        delay(() => tryFullscreen(false), 900);
+        delay(() => tryFullscreen(!!showIfFail), 1800);
+      };
 
       let gpsTimer = null;
 
-      function gpsTick() {
-        if (!("geolocation" in navigator)) {
-          gpsStop();
-          return;
-        }
+      const gpsStop = () => {
+        if (!gpsTimer) return;
+        clearInterval(gpsTimer);
+        gpsTimer = null;
+      };
 
+      const gpsTick = () => {
+        if (!("geolocation" in navigator)) return gpsStop();
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const c = pos.coords || {};
-            send({
-              mode: "writeLoc",
-              token: TOKEN,
-              lat: c.latitude ?? "",
-              lng: c.longitude ?? ""
-            });
+            send({ mode: "writeLoc", token: TOKEN, lat: c.latitude ?? "", lng: c.longitude ?? "" });
           },
           () => {},
           { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
         );
-      }
+      };
 
-      function gpsStart() {
+      const gpsStart = () => {
         if (gpsTimer) return;
         gpsTick();
-        gpsTimer = window.setInterval(gpsTick, GPS_INTERVAL);
-      }
+        gpsTimer = setInterval(gpsTick, GPS_INTERVAL);
+      };
 
-      function gpsStop() {
-        if (!gpsTimer) return;
-        window.clearInterval(gpsTimer);
-        gpsTimer = null;
-      }
+      const norm = (s) => (s ? s.replace(/\s+/g, " ").trim().toUpperCase() : "");
 
-      function isVisible(el) {
-        if (!isElement(el)) return false;
-        const win = el.ownerDocument?.defaultView;
+      const isVisible = (el) => {
+        if (!el || el.nodeType !== 1) return false;
+        const win = el.ownerDocument && el.ownerDocument.defaultView;
         if (!win) return false;
         const cs = win.getComputedStyle(el);
         if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return false;
         const r = el.getBoundingClientRect();
         return r.width > 0 && r.height > 0;
-      }
+      };
 
-      function norm(s) {
-        return (s || "").replace(/\s+/g, " ").trim().toUpperCase();
-      }
+      const findStateEl = (doc) => {
+        const body = doc && doc.body;
+        if (!body) return null;
 
-      function findStateEl(doc) {
-        const all = doc.querySelectorAll("body *");
-        let bestEl = null;
+        const walker = doc.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, {
+          acceptNode(node) {
+            if (!node || node.nodeType !== 1) return NodeFilter.FILTER_SKIP;
+            const txt = norm(node.textContent);
+            return STATES.has(txt) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+          }
+        });
+
+        let best = null;
         let bestArea = Infinity;
 
-        for (const el of all) {
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          const el = n;
           if (!isVisible(el)) continue;
-          const txt = norm(el.textContent);
-          if (!STATES.has(txt)) continue;
           const r = el.getBoundingClientRect();
           const area = r.width * r.height;
           if (area > 0 && area < bestArea) {
             bestArea = area;
-            bestEl = el;
+            best = el;
           }
         }
-        return bestEl;
-      }
+        return best;
+      };
 
       let observer = null;
       let lastState = "";
 
-      function sendState(state) {
-        send({ mode: "write", token: TOKEN, cell: STATE_CELL, value: state });
-      }
+      const sendState = (state) => send({ mode: "write", token: TOKEN, cell: STATE_CELL, value: state });
 
-      function hookTimex() {
-        const frame = document.getElementById("timexFrame");
-        if (!frame) return;
+      const hookTimex = () => {
+        if (!timexFrame) return;
 
         const attach = () => {
           let doc;
           try {
-            doc = frame.contentDocument || frame.contentWindow?.document;
+            doc = timexFrame.contentDocument || (timexFrame.contentWindow && timexFrame.contentWindow.document);
           } catch (_) {
             return;
           }
-          if (!doc?.body) return;
+          if (!doc || !doc.body) return;
 
           const read = () => {
             const el = findStateEl(doc);
@@ -289,32 +333,60 @@
 
           if (observer) observer.disconnect();
           observer = new MutationObserver(read);
-          observer.observe(doc.body, { childList:true, subtree:true, characterData:true });
+          observer.observe(doc.body, { childList: true, subtree: true, characterData: true });
         };
 
-        frame.addEventListener("load", attach, { passive:true });
-        safeTimeout(attach, 800);
-        safeTimeout(attach, 2000);
-      }
+        timexFrame.addEventListener("load", attach, { passive: true });
+        delay(attach, 800);
+        delay(attach, 2000);
+      };
 
-      function onVisibility() {
+      const onVisibility = () => {
         if (document.hidden) gpsStop();
-        else gpsStart();
-      }
+        else {
+          gpsStart();
+          pushFullscreen(true);
+        }
+      };
+
+      const onGesture = () => tryFullscreen(false);
+
+      const wireGestures = () => {
+        const opts = { passive: true };
+        ["pointerdown", "touchstart", "click", "dblclick", "keydown"].forEach((evt) => {
+          document.addEventListener(evt, onGesture, opts);
+        });
+        window.addEventListener("focus", () => pushFullscreen(false), opts);
+        window.addEventListener("resize", () => pushFullscreen(false), opts);
+        window.addEventListener("orientationchange", () => pushFullscreen(false), opts);
+
+        if (fsPrompt) {
+          fsPrompt.addEventListener("click", () => tryFullscreen(false));
+          fsPrompt.addEventListener("pointerdown", () => tryFullscreen(false), { passive: true });
+          fsPrompt.addEventListener("touchstart", () => tryFullscreen(false), { passive: true });
+          fsPrompt.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") tryFullscreen(false);
+          });
+        }
+      };
+
+      const onFsChange = () => {
+        if (FS.isOn()) hidePrompt();
+        else delay(() => tryFullscreen(true), 250);
+      };
 
       document.addEventListener("DOMContentLoaded", () => {
-        scheduleFullscreenAttempts();
+        wireGestures();
+        pushFullscreen(true);
         gpsStart();
         hookTimex();
-      }, { passive:true });
+      }, { passive: true });
 
-      document.addEventListener("fullscreenchange", () => {
-        if (!document.fullscreenElement) safeTimeout(goFullscreen, 300);
-      }, { passive:true });
-
-      document.addEventListener("pointerdown", goFullscreen, { passive:true, once:true });
-      document.addEventListener("visibilitychange", onVisibility, { passive:true });
-      window.addEventListener("pagehide", gpsStop, { passive:true });
+      document.addEventListener("visibilitychange", onVisibility, { passive: true });
+      document.addEventListener("fullscreenchange", onFsChange, { passive: true });
+      document.addEventListener("webkitfullscreenchange", onFsChange, { passive: true });
+      document.addEventListener("msfullscreenchange", onFsChange, { passive: true });
+      window.addEventListener("pagehide", gpsStop, { passive: true });
 
       window.gpsStart = gpsStart;
       window.gpsStop = gpsStop;

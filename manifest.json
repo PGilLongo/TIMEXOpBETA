@@ -1,7 +1,6 @@
 {
   "name": "TIMEX Operativo",
   "short_name": "TIMEX",
-  "description": "TIMEX PWA Operativa",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -21,3 +20,4 @@
     }
   ]
 }
+``` :contentReference[oaicite:0]{index=0}
