@@ -267,6 +267,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
+
     .modalHeaderSub{
       margin:0;
       padding:6px 10px 8px;
@@ -494,501 +495,544 @@
   </div>
 
   <script>
-    const HIDE_FORMS_BETWEEN_STATES = true;
-    const PLACEHOLDER_CELL = "---";
+    (() => {
+      "use strict";
 
-    const TH_ACTIVACION = 180;
-    const TH_INTERVENCION = 1800;
+      const HIDE_FORMS_BETWEEN_STATES = true;
+      const PLACEHOLDER_CELL = "---";
 
-    const SUPABASE_URL = "https://zacogqlscfdwncugfkko.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_5D_QVNyeqroW9tQO_jnmoA_cHS8PXE_";
+      const TH_ACTIVACION = 180;
+      const TH_INTERVENCION = 1800;
 
-    async function __pushVisorEvent(payload){
-      try{
-        await fetch(`${SUPABASE_URL}/rest/v1/visor_events`, {
-          method:"POST",
-          headers:{
-            apikey:SUPABASE_KEY,
-            Authorization:"Bearer " + SUPABASE_KEY,
-            "Content-Type":"application/json",
-            Prefer:"return=minimal"
-          },
-          body:JSON.stringify(payload)
-        });
-      }catch(_){}
-    }
+      const SUPABASE_URL = "https://zacogqlscfdwncugfkko.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_5D_QVNyeqroW9tQO_jnmoA_cHS8PXE_";
 
-    const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyQ1fDCEEG3kxqWdElRUmxbEsWePqvGv2nItl-PDvN8uF2P_9tfMfDZFVhHafU5JNFx/exec";
+      const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyQ1fDCEEG3kxqWdElRUmxbEsWePqvGv2nItl-PDvN8uF2P_9tfMfDZFVhHafU5JNFx/exec";
 
-    const SERVICIOS = [
-      { name:"Preventivo", color:"#2ec27e" },
-      { name:"Columna de humo", color:"#ff9f0a" },
-      { name:"Conato de incendio", color:"#ff453a" },
-      { name:"Incendio", color:"#e01b24" },
-      { name:"Inundación", color:"#1c71d8" },
-      { name:"Vertido", color:"#7c3aed" },
-      { name:"Intervención estructural", color:"#10b981" },
-      { name:"Intervención vehicular", color:"#22c55e" },
-      { name:"Emergencia sanitaria", color:"#fb7185" },
-      { name:"Himenopteros", color:"#f6d32d" },
-      { name:"Animales", color:"#a3e635" },
-      { name:"Logistica", color:"#60a5fa" },
-      { name:"Servicio urgente por medios", color:"#38bdf8" },
-      { name:"Otros", color:"#cbd5e1" }
-    ];
-
-    const INTERVINIENTES = [
-      { code:"ECO", yellow:false },
-      { code:"B05", yellow:false },
-      { code:"B09", yellow:false },
-      { code:"B07", yellow:true },
-      { code:"B11", yellow:false },
-      { code:"B14", yellow:true },
-      { code:"B15", yellow:true },
-      { code:"B17", yellow:true },
-      { code:"B18", yellow:true },
-      { code:"B19", yellow:true },
-      { code:"B20", yellow:true }
-    ];
-
-    const MATERIALES = [
-      "EPIs","BUGGIE","VIR","BUL","BRL","AVANT",
-      "Material de observación","Material de medición","Material de balizamiento","Material de achique",
-      "Material de extinción","Material de estructuras","Material de demolición","Material de iluminación",
-      "Material de estabilización","Material de rescate","Material vehicular","Material de abejas",
-      "Material de avispas","Material de limpieza","Material de animales",
-      "Medios de tracción","Medios de fortuna","Material de altura","Maquinaria de prevención",
-      "Equipo hidráulico de fuerza","Monitor multiparamétrico","Botiquín de ataque","Fungibles","Herramientas"
-    ];
-
-    const btnA = document.getElementById("btnA");
-    const btnI = document.getElementById("btnI");
-    const btnF = document.getElementById("btnF");
-    const btnD = document.getElementById("btnD");
-
-    const tsA = document.getElementById("tsA");
-    const tsI = document.getElementById("tsI");
-    const tsF = document.getElementById("tsF");
-    const tsD = document.getElementById("tsD");
-
-    const statusEl = document.getElementById("status");
-    const timerEl = document.getElementById("timer");
-
-    const overlay = document.getElementById("overlay");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalDesc = document.getElementById("modalDesc");
-    const modalBody = document.getElementById("modalBody");
-    const modalBack = document.getElementById("modalBack");
-    const modalNext = document.getElementById("modalNext");
-    const headerTitleEl = document.getElementById("headerTitle");
-
-    let alertante = PLACEHOLDER_CELL;
-    let servicio = PLACEHOLDER_CELL;
-    let lugar = PLACEHOLDER_CELL;
-    let informe = PLACEHOLDER_CELL;
-    let intervinientes = new Set([PLACEHOLDER_CELL]);
-    let materiales = new Set([PLACEHOLDER_CELL]);
-
-    let timerStartMs = null;
-    let timerInterval = null;
-
-    let tA=null, tI=null, tF=null, tD=null;
-    let stage = "activacion";
-
-    let modalFlow = null;
-    let modalStep = 0;
-    let pendingServicio = null;
-
-    let locA = null, locI = null, locF = null, locD = null;
-
-    const isBlank = (v) => v === null || v === undefined || String(v).trim() === "";
-    const cell = (v) => isBlank(v) ? PLACEHOLDER_CELL : String(v).trim();
-
-    function setSetWithPlaceholderIfEmpty(setObj){
-      const arr = Array.from(setObj || []);
-      const cleaned = arr.map(x => String(x).trim()).filter(x => x.length > 0);
-      if(cleaned.length === 0) return [PLACEHOLDER_CELL];
-      if(cleaned.length === 1 && cleaned[0] === PLACEHOLDER_CELL) return [PLACEHOLDER_CELL];
-      return cleaned.filter(x => x !== PLACEHOLDER_CELL);
-    }
-
-    function __sendToVISOR(estado, loc, label){
-      if(!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return;
-
-      const k = String(estado || "").toUpperCase().trim();
-      const btn =
-        k === "ACTIVACION" ? btnA :
-        k === "INTERVENCION" ? btnI :
-        k === "FINALIZACION" ? btnF :
-        k === "DISPONIBLES" ? btnD : null;
-
-      let color = null;
-      try{ color = btn ? getComputedStyle(btn).backgroundColor : null; }catch(_){ color = null; }
-
-      __pushVisorEvent({
-        estado:k,
-        lat:loc.lat,
-        lng:loc.lon,
-        color,
-        label:(label || document.title || "TIMEX")
-      });
-    }
-
-    function applyThemeForStage(next){
-      document.body.classList.remove("theme-activacion","theme-intervencion","theme-finalizacion","theme-disponibles");
-      document.body.classList.add(
-        next === "activacion" ? "theme-activacion" :
-        next === "intervencion" ? "theme-intervencion" :
-        next === "finalizacion" ? "theme-finalizacion" : "theme-disponibles"
-      );
-    }
-
-    function timestampES(){
-      return new Date().toLocaleString("es-ES", {
-        day:"2-digit", month:"2-digit", year:"numeric",
-        hour:"2-digit", minute:"2-digit", second:"2-digit"
-      });
-    }
-
-    const pad2 = (n) => String(n).padStart(2,"0");
-
-    function formatHMS(ms){
-      const s = Math.max(0, Math.floor(ms/1000));
-      const h = Math.floor(s/3600);
-      const m = Math.floor((s%3600)/60);
-      const r = s%60;
-      return `${pad2(h)}:${pad2(m)}:${pad2(r)}`;
-    }
-
-    function setStage(next){
-      stage = next;
-      statusEl.textContent =
-        next === "activacion" ? "ACTIVACIÓN" :
-        next === "intervencion" ? "INTERVENCIÓN" :
-        next === "finalizacion" ? "FINALIZACIÓN" : "DISPONIBLES";
-
-      timerEl.classList.remove("timer-activacion","timer-intervencion","timer-finalizacion","timer-disponibles");
-      timerEl.classList.add(
-        next === "activacion" ? "timer-activacion" :
-        next === "intervencion" ? "timer-intervencion" :
-        next === "finalizacion" ? "timer-finalizacion" : "timer-disponibles"
-      );
-      timerEl.classList.remove("exceeded");
-
-      applyThemeForStage(next);
-    }
-
-    function ensureTimerRunning(){
-      if (timerStartMs === null) timerStartMs = Date.now();
-      if (timerInterval) return;
-      timerEl.style.display = "block";
-      timerInterval = setInterval(() => {
-        timerEl.textContent = formatHMS(Date.now() - timerStartMs);
-      }, 250);
-    }
-
-    function stopTimerAndReset(){
-      if (timerInterval) clearInterval(timerInterval);
-      timerInterval = null;
-      timerStartMs = null;
-      timerEl.textContent = "00:00:00";
-      timerEl.classList.remove("exceeded");
-    }
-
-    let __lastGoodLoc = null;
-    let __lastGoodLocAt = 0;
-
-    function normalizeGeo(pos){
-      return {
-        lat:+pos.coords.latitude.toFixed(6),
-        lon:+pos.coords.longitude.toFixed(6),
-        acc:Math.round(pos.coords.accuracy || 0)
-      };
-    }
-
-    function geoErrorToText(err){
-      if(!err) return "Error desconocido";
-      if(err.code === 1) return "Permiso de ubicación denegado";
-      if(err.code === 2) return "Ubicación no disponible";
-      if(err.code === 3) return "Tiempo de espera agotado";
-      return err.message || "Error de geolocalización";
-    }
-
-    function requestGeoOnce(options){
-      return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, options);
-      });
-    }
-
-    async function precheckGeoPermissions(){
-      try{
-        if(!navigator.permissions || !navigator.permissions.query) return { state:"unknown" };
-        const p = await navigator.permissions.query({ name:"geolocation" });
-        return { state:p.state };
-      }catch{
-        return { state:"unknown" };
-      }
-    }
-
-    async function getLocationSmart(){
-      if(!navigator.geolocation) return null;
-
-      const isSecure = (window.isSecureContext === true) || location.protocol === "https:" || location.hostname === "localhost";
-      if(!isSecure){
-        alert("⚠️ La geolocalización en móviles requiere HTTPS. Abre esta página con https:// (o en localhost).");
-        return null;
-      }
-
-      const perm = await precheckGeoPermissions();
-      if(perm.state === "denied"){
-        alert("⚠️ La ubicación está bloqueada en el navegador. Activa permisos de ubicación para esta web.");
-        return null;
-      }
-
-      const attempts = [
-        { enableHighAccuracy:true,  timeout:15000, maximumAge:0 },
-        { enableHighAccuracy:false, timeout:15000, maximumAge:0 },
-        { enableHighAccuracy:false, timeout:15000, maximumAge:120000 }
+      const SERVICIOS = [
+        { name:"Preventivo", color:"#2ec27e" },
+        { name:"Columna de humo", color:"#ff9f0a" },
+        { name:"Conato de incendio", color:"#ff453a" },
+        { name:"Incendio", color:"#e01b24" },
+        { name:"Inundación", color:"#1c71d8" },
+        { name:"Vertido", color:"#7c3aed" },
+        { name:"Intervención estructural", color:"#10b981" },
+        { name:"Intervención vehicular", color:"#22c55e" },
+        { name:"Emergencia sanitaria", color:"#fb7185" },
+        { name:"Himenopteros", color:"#f6d32d" },
+        { name:"Animales", color:"#a3e635" },
+        { name:"Logistica", color:"#60a5fa" },
+        { name:"Servicio urgente por medios", color:"#38bdf8" },
+        { name:"Otros", color:"#cbd5e1" }
       ];
 
-      let lastErr = null;
-      for(const opts of attempts){
+      const INTERVINIENTES = [
+        { code:"ECO", yellow:false },
+        { code:"B05", yellow:false },
+        { code:"B09", yellow:false },
+        { code:"B07", yellow:true },
+        { code:"B11", yellow:false },
+        { code:"B14", yellow:true },
+        { code:"B15", yellow:true },
+        { code:"B17", yellow:true },
+        { code:"B18", yellow:true },
+        { code:"B19", yellow:true },
+        { code:"B20", yellow:true }
+      ];
+
+      const MATERIALES = [
+        "EPIs","BUGGIE","VIR","BUL","BRL","AVANT",
+        "Material de observación","Material de medición","Material de balizamiento","Material de achique",
+        "Material de extinción","Material de estructuras","Material de demolición","Material de iluminación",
+        "Material de estabilización","Material de rescate","Material vehicular","Material de abejas",
+        "Material de avispas","Material de limpieza","Material de animales",
+        "Medios de tracción","Medios de fortuna","Material de altura","Maquinaria de prevención",
+        "Equipo hidráulico de fuerza","Monitor multiparamétrico","Botiquín de ataque","Fungibles","Herramientas"
+      ];
+
+      const $ = (id) => document.getElementById(id);
+
+      const btnA = $("btnA");
+      const btnI = $("btnI");
+      const btnF = $("btnF");
+      const btnD = $("btnD");
+
+      const tsA = $("tsA");
+      const tsI = $("tsI");
+      const tsF = $("tsF");
+      const tsD = $("tsD");
+
+      const statusEl = $("status");
+      const timerEl = $("timer");
+
+      const overlay = $("overlay");
+      const modalTitle = $("modalTitle");
+      const modalDesc = $("modalDesc");
+      const modalBody = $("modalBody");
+      const modalBack = $("modalBack");
+      const modalNext = $("modalNext");
+      const headerTitleEl = $("headerTitle");
+
+      const getHeaderLabel = () => (headerTitleEl ? headerTitleEl.textContent : document.title) || "TIMEX";
+
+      let alertante = PLACEHOLDER_CELL;
+      let servicio = PLACEHOLDER_CELL;
+      let lugar = PLACEHOLDER_CELL;
+      let informe = PLACEHOLDER_CELL;
+      let intervinientes = new Set([PLACEHOLDER_CELL]);
+      let materiales = new Set([PLACEHOLDER_CELL]);
+
+      let timerStartMs = null;
+      let timerInterval = null;
+
+      let tA = null, tI = null, tF = null, tD = null;
+      let stage = "activacion";
+
+      let modalFlow = null;
+      let modalStep = 0;
+      let pendingServicio = null;
+
+      let locA = null, locI = null, locF = null, locD = null;
+
+      const isBlank = (v) => v === null || v === undefined || String(v).trim() === "";
+      const cell = (v) => isBlank(v) ? PLACEHOLDER_CELL : String(v).trim();
+
+      function setSetWithPlaceholderIfEmpty(setObj){
+        const arr = Array.from(setObj || []);
+        const cleaned = arr.map(x => String(x).trim()).filter(x => x.length > 0);
+        if(cleaned.length === 0) return [PLACEHOLDER_CELL];
+        if(cleaned.length === 1 && cleaned[0] === PLACEHOLDER_CELL) return [PLACEHOLDER_CELL];
+        return cleaned.filter(x => x !== PLACEHOLDER_CELL);
+      }
+
+      async function pushVisorEvent(payload){
         try{
-          const pos = await requestGeoOnce(opts);
-          const loc = normalizeGeo(pos);
-          __lastGoodLoc = loc;
-          __lastGoodLocAt = Date.now();
-          return loc;
-        }catch(e){
-          lastErr = e;
-          if(e && e.code === 1) break;
-        }
-      }
-
-      const now = Date.now();
-      if(__lastGoodLoc && (now - __lastGoodLocAt) <= 120000) return __lastGoodLoc;
-
-      const msg = geoErrorToText(lastErr);
-      if(msg === "Tiempo de espera agotado" || msg === "Ubicación no disponible"){
-        alert("⚠️ No se pudo obtener la ubicación (GPS). Comprueba: GPS activado, permisos, y cobertura. Se registrará el marcador sin coordenadas.");
-      }else if(msg === "Permiso de ubicación denegado"){
-        alert("⚠️ Permiso de ubicación denegado. Se registrará el marcador sin coordenadas.");
-      }
-
-      return null;
-    }
-
-    function getLocationOnce(cb){
-      getLocationSmart().then(loc => cb(loc)).catch(() => cb(null));
-    }
-
-    function computeDeltasSeconds(){
-      const activacion = (tA && tI) ? Math.max(0, Math.round((tI - tA)/1000)) : 0;
-      const intervencion = (tI && tF) ? Math.max(0, Math.round((tF - tI)/1000)) : 0;
-      const finalizacion = (tF && tD) ? Math.max(0, Math.round((tD - tF)/1000)) : 0;
-      return { activacion, intervencion, finalizacion };
-    }
-
-    function sendCycleToSheet(){
-      const d = computeDeltasSeconds();
-
-      const payload = {
-        alertante:cell(alertante),
-        servicio:cell(servicio),
-        lugar:cell(lugar),
-        intervinientes:setSetWithPlaceholderIfEmpty(intervinientes),
-        materiales:setSetWithPlaceholderIfEmpty(materiales),
-        tsA:cell(tsA.textContent),
-        tsI:cell(tsI.textContent),
-        tsF:cell(tsF.textContent),
-        tsD:cell(tsD.textContent),
-        total:timerEl.textContent,
-        dA:d.activacion,
-        dI:d.intervencion,
-        dF:d.finalizacion,
-        informe:cell(informe),
-        locA, locI, locF, locD
-      };
-
-      fetch(SHEET_WEBAPP_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) }).catch(()=>{});
-    }
-
-    function openModal(flow){
-      if(HIDE_FORMS_BETWEEN_STATES){
-        if(flow === "activation"){
-          alertante = PLACEHOLDER_CELL;
-          servicio  = PLACEHOLDER_CELL;
-          lugar     = PLACEHOLDER_CELL;
-          informe   = PLACEHOLDER_CELL;
-          intervinientes = new Set([PLACEHOLDER_CELL]);
-          materiales     = new Set([PLACEHOLDER_CELL]);
-          finalizeActivation();
-          return;
-        }
-        if(flow === "material"){
-          materiales = new Set([PLACEHOLDER_CELL]);
-          finalizeFinalizacion();
-          return;
-        }
-        if(flow === "informe"){
-          informe = PLACEHOLDER_CELL;
-          finalizeDisponibles();
-          return;
-        }
-      }
-
-      modalFlow = flow;
-      modalStep = 0;
-      overlay.style.display = "flex";
-      renderModalStep();
-    }
-
-    function closeModal(){
-      overlay.style.display = "none";
-      modalFlow = null;
-      modalStep = 0;
-      modalBody.innerHTML = "";
-      modalNext.onclick = null;
-      modalBack.onclick = null;
-    }
-
-    function setModalNav(canBack, canNext){
-      modalBack.style.display = canBack ? "inline-flex" : "none";
-      modalNext.style.display = canNext ? "inline-flex" : "none";
-    }
-
-    function resetCycleDataForNewRun(){
-      alertante = PLACEHOLDER_CELL;
-      servicio = PLACEHOLDER_CELL;
-      lugar = PLACEHOLDER_CELL;
-      informe = PLACEHOLDER_CELL;
-
-      intervinientes = new Set([PLACEHOLDER_CELL]);
-      materiales = new Set([PLACEHOLDER_CELL]);
-      pendingServicio = null;
-
-      tA=tI=tF=tD=null;
-      locA=locI=locF=locD=null;
-
-      tsA.textContent=PLACEHOLDER_CELL;
-      tsI.textContent=PLACEHOLDER_CELL;
-      tsF.textContent=PLACEHOLDER_CELL;
-      tsD.textContent=PLACEHOLDER_CELL;
-    }
-
-    const U = (s, max) => String(s ?? "").trim().toUpperCase().slice(0, max);
-
-    function renderModalStep(){
-      modalBody.innerHTML = "";
-
-      if(modalFlow === "activation"){
-        if(modalStep === 0){
-          modalTitle.textContent = "Alertante";
-          modalDesc.textContent = "Introduce un texto corto (máx 20 caracteres).";
-
-          const wrap = document.createElement("div");
-          wrap.className = "field";
-          wrap.innerHTML = `
-            <input id="alertanteInput" class="input" type="text" maxlength="20" placeholder="EJ: VECINO, POLICÍA..." />
-            <div class="help"><span id="alertanteCount">0</span>/20</div>
-          `;
-          modalBody.appendChild(wrap);
-
-          const input = wrap.querySelector("#alertanteInput");
-          const count = wrap.querySelector("#alertanteCount");
-          const refresh = () => {
-            count.textContent = input.value.length;
-            modalNext.disabled = input.value.trim().length === 0;
-          };
-          input.addEventListener("input", refresh);
-          setTimeout(() => { refresh(); input.focus(); }, 0);
-
-          setModalNav(false, true);
-          modalNext.textContent = "Continuar";
-          modalNext.onclick = () => { alertante = U(input.value, 20); modalStep = 1; renderModalStep(); };
-          return;
-        }
-
-        if(modalStep === 1){
-          modalTitle.textContent = "Servicio";
-          modalDesc.textContent = "Selecciona el tipo de servicio.";
-
-          const chips = document.createElement("div");
-          chips.className = "chips";
-
-          SERVICIOS.forEach(s => {
-            const c = document.createElement("div");
-            c.className = "chip serviceChip";
-            c.innerHTML = `<span class="dot" style="background:${s.color}"></span><span>${s.name.toUpperCase()}</span>`;
-            if(pendingServicio === s.name) c.classList.add("selected");
-            c.onclick = () => {
-              pendingServicio = s.name;
-              Array.from(chips.children).forEach(x => x.classList.remove("selected"));
-              c.classList.add("selected");
-              modalNext.disabled = false;
-            };
-            chips.appendChild(c);
+          await fetch(`${SUPABASE_URL}/rest/v1/visor_events`, {
+            method:"POST",
+            headers:{
+              apikey:SUPABASE_KEY,
+              Authorization:"Bearer " + SUPABASE_KEY,
+              "Content-Type":"application/json",
+              Prefer:"return=minimal"
+            },
+            body:JSON.stringify(payload)
           });
+        }catch(_){}
+      }
 
-          modalBody.appendChild(chips);
+      function sendToVISOR(estado, loc, label){
+        if(!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return;
 
-          setModalNav(true, true);
-          modalBack.textContent = "Atrás";
-          modalNext.textContent = "Continuar";
-          modalNext.disabled = !pendingServicio;
+        const k = String(estado || "").toUpperCase().trim();
+        const btn =
+          k === "ACTIVACION" ? btnA :
+          k === "INTERVENCION" ? btnI :
+          k === "FINALIZACION" ? btnF :
+          k === "DISPONIBLES" ? btnD : null;
 
-          modalBack.onclick = () => { modalStep = 0; renderModalStep(); };
-          modalNext.onclick = () => { servicio = (pendingServicio || servicio); modalStep = 2; renderModalStep(); };
-          return;
+        let color = null;
+        try{ color = btn ? getComputedStyle(btn).backgroundColor : null; }catch(_){ color = null; }
+
+        pushVisorEvent({
+          estado:k,
+          lat:loc.lat,
+          lng:loc.lon,
+          color,
+          label:label || document.title || "TIMEX"
+        });
+      }
+
+      function applyThemeForStage(next){
+        document.body.classList.remove("theme-activacion","theme-intervencion","theme-finalizacion","theme-disponibles");
+        document.body.classList.add(
+          next === "activacion" ? "theme-activacion" :
+          next === "intervencion" ? "theme-intervencion" :
+          next === "finalizacion" ? "theme-finalizacion" : "theme-disponibles"
+        );
+      }
+
+      function timestampES(){
+        return new Date().toLocaleString("es-ES", {
+          day:"2-digit", month:"2-digit", year:"numeric",
+          hour:"2-digit", minute:"2-digit", second:"2-digit"
+        });
+      }
+
+      const pad2 = (n) => String(n).padStart(2,"0");
+
+      function formatHMS(ms){
+        const s = Math.max(0, Math.floor(ms/1000));
+        const h = Math.floor(s/3600);
+        const m = Math.floor((s%3600)/60);
+        const r = s%60;
+        return `${pad2(h)}:${pad2(m)}:${pad2(r)}`;
+      }
+
+      function setStage(next){
+        stage = next;
+        statusEl.textContent =
+          next === "activacion" ? "ACTIVACIÓN" :
+          next === "intervencion" ? "INTERVENCIÓN" :
+          next === "finalizacion" ? "FINALIZACIÓN" : "DISPONIBLES";
+
+        timerEl.classList.remove("timer-activacion","timer-intervencion","timer-finalizacion","timer-disponibles");
+        timerEl.classList.add(
+          next === "activacion" ? "timer-activacion" :
+          next === "intervencion" ? "timer-intervencion" :
+          next === "finalizacion" ? "timer-finalizacion" : "timer-disponibles"
+        );
+        timerEl.classList.remove("exceeded");
+
+        applyThemeForStage(next);
+      }
+
+      function ensureTimerRunning(){
+        if (timerStartMs === null) timerStartMs = Date.now();
+        if (timerInterval) return;
+        timerEl.style.display = "block";
+        timerInterval = setInterval(() => {
+          timerEl.textContent = formatHMS(Date.now() - timerStartMs);
+        }, 250);
+      }
+
+      function stopTimerAndReset(){
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+        timerStartMs = null;
+        timerEl.textContent = "00:00:00";
+        timerEl.classList.remove("exceeded");
+      }
+
+      let lastGoodLoc = null;
+      let lastGoodLocAt = 0;
+
+      function normalizeGeo(pos){
+        return {
+          lat:+pos.coords.latitude.toFixed(6),
+          lon:+pos.coords.longitude.toFixed(6),
+          acc:Math.round(pos.coords.accuracy || 0)
+        };
+      }
+
+      function geoErrorToText(err){
+        if(!err) return "Error desconocido";
+        if(err.code === 1) return "Permiso de ubicación denegado";
+        if(err.code === 2) return "Ubicación no disponible";
+        if(err.code === 3) return "Tiempo de espera agotado";
+        return err.message || "Error de geolocalización";
+      }
+
+      function requestGeoOnce(options){
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+      }
+
+      async function precheckGeoPermissions(){
+        try{
+          if(!navigator.permissions || !navigator.permissions.query) return { state:"unknown" };
+          const p = await navigator.permissions.query({ name:"geolocation" });
+          return { state:p.state };
+        }catch{
+          return { state:"unknown" };
+        }
+      }
+
+      async function getLocationSmart(){
+        if(!navigator.geolocation) return null;
+
+        const isSecure = (window.isSecureContext === true) || location.protocol === "https:" || location.hostname === "localhost";
+        if(!isSecure){
+          alert("⚠️ La geolocalización en móviles requiere HTTPS. Abre esta página con https:// (o en localhost).");
+          return null;
         }
 
-        if(modalStep === 2){
-          modalTitle.textContent = "Lugar";
-          modalDesc.textContent = "Texto corto (máx 20 caracteres).";
-
-          const wrap = document.createElement("div");
-          wrap.className = "field";
-          wrap.innerHTML = `
-            <input id="lugarInput" class="input" type="text" maxlength="20" placeholder="EJ: KM12, PUENTE..." />
-            <div class="help"><span id="lugarCount">0</span>/20</div>
-          `;
-          modalBody.appendChild(wrap);
-
-          const input = wrap.querySelector("#lugarInput");
-          const count = wrap.querySelector("#lugarCount");
-          const refresh = () => {
-            count.textContent = input.value.length;
-            modalNext.disabled = input.value.trim().length === 0;
-          };
-          input.addEventListener("input", refresh);
-          setTimeout(() => { refresh(); input.focus(); }, 0);
-
-          setModalNav(true, true);
-          modalNext.textContent = "Continuar";
-          modalBack.textContent = "Atrás";
-
-          modalNext.onclick = () => { lugar = U(input.value, 20); modalStep = 3; renderModalStep(); };
-          modalBack.onclick = () => { modalStep = 1; renderModalStep(); };
-          return;
+        const perm = await precheckGeoPermissions();
+        if(perm.state === "denied"){
+          alert("⚠️ La ubicación está bloqueada en el navegador. Activa permisos de ubicación para esta web.");
+          return null;
         }
 
-        if(modalStep === 3){
-          modalTitle.textContent = "Intervinientes";
-          modalDesc.textContent = "Selecciona tantos como quieras (sin repetir).";
+        const attempts = [
+          { enableHighAccuracy:true,  timeout:15000, maximumAge:0 },
+          { enableHighAccuracy:false, timeout:15000, maximumAge:0 },
+          { enableHighAccuracy:false, timeout:15000, maximumAge:120000 }
+        ];
+
+        let lastErr = null;
+        for(const opts of attempts){
+          try{
+            const pos = await requestGeoOnce(opts);
+            const loc = normalizeGeo(pos);
+            lastGoodLoc = loc;
+            lastGoodLocAt = Date.now();
+            return loc;
+          }catch(e){
+            lastErr = e;
+            if(e && e.code === 1) break;
+          }
+        }
+
+        const now = Date.now();
+        if(lastGoodLoc && (now - lastGoodLocAt) <= 120000) return lastGoodLoc;
+
+        const msg = geoErrorToText(lastErr);
+        if(msg === "Tiempo de espera agotado" || msg === "Ubicación no disponible"){
+          alert("⚠️ No se pudo obtener la ubicación (GPS). Comprueba: GPS activado, permisos, y cobertura. Se registrará el marcador sin coordenadas.");
+        }else if(msg === "Permiso de ubicación denegado"){
+          alert("⚠️ Permiso de ubicación denegado. Se registrará el marcador sin coordenadas.");
+        }
+
+        return null;
+      }
+
+      function getLocationOnce(cb){
+        getLocationSmart().then(loc => cb(loc)).catch(() => cb(null));
+      }
+
+      function computeDeltasSeconds(){
+        const activacion = (tA && tI) ? Math.max(0, Math.round((tI - tA)/1000)) : 0;
+        const intervencion = (tI && tF) ? Math.max(0, Math.round((tF - tI)/1000)) : 0;
+        const finalizacion = (tF && tD) ? Math.max(0, Math.round((tD - tF)/1000)) : 0;
+        return { activacion, intervencion, finalizacion };
+      }
+
+      function sendCycleToSheet(){
+        const d = computeDeltasSeconds();
+
+        const payload = {
+          alertante:cell(alertante),
+          servicio:cell(servicio),
+          lugar:cell(lugar),
+          intervinientes:setSetWithPlaceholderIfEmpty(intervinientes),
+          materiales:setSetWithPlaceholderIfEmpty(materiales),
+          tsA:cell(tsA.textContent),
+          tsI:cell(tsI.textContent),
+          tsF:cell(tsF.textContent),
+          tsD:cell(tsD.textContent),
+          total:timerEl.textContent,
+          dA:d.activacion,
+          dI:d.intervencion,
+          dF:d.finalizacion,
+          informe:cell(informe),
+          locA, locI, locF, locD
+        };
+
+        fetch(SHEET_WEBAPP_URL, { method:"POST", mode:"no-cors", body:JSON.stringify(payload) }).catch(()=>{});
+      }
+
+      function openModal(flow){
+        if(HIDE_FORMS_BETWEEN_STATES){
+          if(flow === "activation"){
+            alertante = PLACEHOLDER_CELL;
+            servicio  = PLACEHOLDER_CELL;
+            lugar     = PLACEHOLDER_CELL;
+            informe   = PLACEHOLDER_CELL;
+            intervinientes = new Set([PLACEHOLDER_CELL]);
+            materiales     = new Set([PLACEHOLDER_CELL]);
+            finalizeActivation();
+            return;
+          }
+          if(flow === "material"){
+            materiales = new Set([PLACEHOLDER_CELL]);
+            finalizeFinalizacion();
+            return;
+          }
+          if(flow === "informe"){
+            informe = PLACEHOLDER_CELL;
+            finalizeDisponibles();
+            return;
+          }
+        }
+
+        modalFlow = flow;
+        modalStep = 0;
+        overlay.style.display = "flex";
+        renderModalStep();
+      }
+
+      function closeModal(){
+        overlay.style.display = "none";
+        modalFlow = null;
+        modalStep = 0;
+        modalBody.innerHTML = "";
+        modalNext.onclick = null;
+        modalBack.onclick = null;
+      }
+
+      function setModalNav(canBack, canNext){
+        modalBack.style.display = canBack ? "inline-flex" : "none";
+        modalNext.style.display = canNext ? "inline-flex" : "none";
+      }
+
+      function resetCycleDataForNewRun(){
+        alertante = PLACEHOLDER_CELL;
+        servicio = PLACEHOLDER_CELL;
+        lugar = PLACEHOLDER_CELL;
+        informe = PLACEHOLDER_CELL;
+
+        intervinientes = new Set([PLACEHOLDER_CELL]);
+        materiales = new Set([PLACEHOLDER_CELL]);
+        pendingServicio = null;
+
+        tA=tI=tF=tD=null;
+        locA=locI=locF=locD=null;
+
+        tsA.textContent=PLACEHOLDER_CELL;
+        tsI.textContent=PLACEHOLDER_CELL;
+        tsF.textContent=PLACEHOLDER_CELL;
+        tsD.textContent=PLACEHOLDER_CELL;
+      }
+
+      const U = (s, max) => String(s ?? "").trim().toUpperCase().slice(0, max);
+
+      function renderModalStep(){
+        modalBody.innerHTML = "";
+
+        if(modalFlow === "activation"){
+          if(modalStep === 0){
+            modalTitle.textContent = "Alertante";
+            modalDesc.textContent = "Introduce un texto corto (máx 20 caracteres).";
+
+            const wrap = document.createElement("div");
+            wrap.className = "field";
+            wrap.innerHTML = `
+              <input id="alertanteInput" class="input" type="text" maxlength="20" placeholder="EJ: VECINO, POLICÍA..." />
+              <div class="help"><span id="alertanteCount">0</span>/20</div>
+            `;
+            modalBody.appendChild(wrap);
+
+            const input = wrap.querySelector("#alertanteInput");
+            const count = wrap.querySelector("#alertanteCount");
+            const refresh = () => {
+              count.textContent = input.value.length;
+              modalNext.disabled = input.value.trim().length === 0;
+            };
+            input.addEventListener("input", refresh, { passive:true });
+            setTimeout(() => { refresh(); input.focus(); }, 0);
+
+            setModalNav(false, true);
+            modalNext.textContent = "Continuar";
+            modalNext.onclick = () => { alertante = U(input.value, 20); modalStep = 1; renderModalStep(); };
+            return;
+          }
+
+          if(modalStep === 1){
+            modalTitle.textContent = "Servicio";
+            modalDesc.textContent = "Selecciona el tipo de servicio.";
+
+            const chips = document.createElement("div");
+            chips.className = "chips";
+
+            SERVICIOS.forEach(s => {
+              const c = document.createElement("div");
+              c.className = "chip serviceChip";
+              c.innerHTML = `<span class="dot" style="background:${s.color}"></span><span>${s.name.toUpperCase()}</span>`;
+              if(pendingServicio === s.name) c.classList.add("selected");
+              c.onclick = () => {
+                pendingServicio = s.name;
+                Array.from(chips.children).forEach(x => x.classList.remove("selected"));
+                c.classList.add("selected");
+                modalNext.disabled = false;
+              };
+              chips.appendChild(c);
+            });
+
+            modalBody.appendChild(chips);
+
+            setModalNav(true, true);
+            modalBack.textContent = "Atrás";
+            modalNext.textContent = "Continuar";
+            modalNext.disabled = !pendingServicio;
+
+            modalBack.onclick = () => { modalStep = 0; renderModalStep(); };
+            modalNext.onclick = () => { servicio = (pendingServicio || servicio); modalStep = 2; renderModalStep(); };
+            return;
+          }
+
+          if(modalStep === 2){
+            modalTitle.textContent = "Lugar";
+            modalDesc.textContent = "Texto corto (máx 20 caracteres).";
+
+            const wrap = document.createElement("div");
+            wrap.className = "field";
+            wrap.innerHTML = `
+              <input id="lugarInput" class="input" type="text" maxlength="20" placeholder="EJ: KM12, PUENTE..." />
+              <div class="help"><span id="lugarCount">0</span>/20</div>
+            `;
+            modalBody.appendChild(wrap);
+
+            const input = wrap.querySelector("#lugarInput");
+            const count = wrap.querySelector("#lugarCount");
+            const refresh = () => {
+              count.textContent = input.value.length;
+              modalNext.disabled = input.value.trim().length === 0;
+            };
+            input.addEventListener("input", refresh, { passive:true });
+            setTimeout(() => { refresh(); input.focus(); }, 0);
+
+            setModalNav(true, true);
+            modalNext.textContent = "Continuar";
+            modalBack.textContent = "Atrás";
+
+            modalNext.onclick = () => { lugar = U(input.value, 20); modalStep = 3; renderModalStep(); };
+            modalBack.onclick = () => { modalStep = 1; renderModalStep(); };
+            return;
+          }
+
+          if(modalStep === 3){
+            modalTitle.textContent = "Intervinientes";
+            modalDesc.textContent = "Selecciona tantos como quieras (sin repetir).";
+
+            const chips = document.createElement("div");
+            chips.className = "chips";
+
+            INTERVINIENTES.forEach(item => {
+              const c = document.createElement("div");
+              c.className = `chip ${item.yellow ? "yellowChip" : "whiteChip"}`;
+              c.innerHTML = `<span>${item.code.toUpperCase()}</span>`;
+              if(intervinientes.has(item.code)) c.classList.add("selected");
+
+              c.onclick = () => {
+                if(intervinientes.has(item.code)) intervinientes.delete(item.code);
+                else intervinientes.add(item.code);
+                if(intervinientes.size > 1 && intervinientes.has(PLACEHOLDER_CELL)) intervinientes.delete(PLACEHOLDER_CELL);
+                c.classList.toggle("selected");
+              };
+
+              chips.appendChild(c);
+            });
+
+            modalBody.appendChild(chips);
+
+            setModalNav(true, true);
+            modalNext.textContent = "Confirmar";
+            modalBack.textContent = "Atrás";
+            modalNext.disabled = false;
+
+            modalNext.onclick = () => { closeModal(); finalizeActivation(); };
+            modalBack.onclick = () => { modalStep = 2; renderModalStep(); };
+            return;
+          }
+        }
+
+        if(modalFlow === "material"){
+          modalTitle.textContent = "Material de intervención usado";
+          modalDesc.textContent = "Selecciona opciones (multi-selección).";
 
           const chips = document.createElement("div");
           chips.className = "chips";
 
-          INTERVINIENTES.forEach(item => {
+          MATERIALES.forEach(name => {
             const c = document.createElement("div");
-            c.className = `chip ${item.yellow ? "yellowChip" : "whiteChip"}`;
-            c.innerHTML = `<span>${item.code.toUpperCase()}</span>`;
-            if(intervinientes.has(item.code)) c.classList.add("selected");
+            c.className = "chip whiteChip";
+            c.innerHTML = `<span>${name.toUpperCase()}</span>`;
+            if(materiales.has(name)) c.classList.add("selected");
 
             c.onclick = () => {
-              if(intervinientes.has(item.code)) intervinientes.delete(item.code);
-              else intervinientes.add(item.code);
-              if(intervinientes.size > 1 && intervinientes.has(PLACEHOLDER_CELL)) intervinientes.delete(PLACEHOLDER_CELL);
+              if(materiales.has(name)) materiales.delete(name);
+              else materiales.add(name);
+              if(materiales.size > 1 && materiales.has(PLACEHOLDER_CELL)) materiales.delete(PLACEHOLDER_CELL);
               c.classList.toggle("selected");
             };
 
@@ -997,180 +1041,145 @@
 
           modalBody.appendChild(chips);
 
-          setModalNav(true, true);
+          setModalNav(false, true);
           modalNext.textContent = "Confirmar";
-          modalBack.textContent = "Atrás";
           modalNext.disabled = false;
+          modalNext.onclick = () => { closeModal(); finalizeFinalizacion(); };
+          return;
+        }
 
-          modalNext.onclick = () => { closeModal(); finalizeActivation(); };
-          modalBack.onclick = () => { modalStep = 2; renderModalStep(); };
+        if(modalFlow === "informe"){
+          modalTitle.textContent = "Informe final";
+          modalDesc.textContent = "Texto largo (máx 1000 caracteres).";
+
+          const wrap = document.createElement("div");
+          wrap.className = "field";
+          wrap.innerHTML = `
+            <textarea id="informeInput" class="input" maxlength="1000" rows="6" placeholder="ESCRIBE EL INFORME..."></textarea>
+            <div class="help"><span id="infCount">0</span>/1000</div>
+          `;
+          modalBody.appendChild(wrap);
+
+          const ta = wrap.querySelector("#informeInput");
+          const cnt = wrap.querySelector("#infCount");
+          const refresh = () => {
+            cnt.textContent = ta.value.length;
+            modalNext.disabled = ta.value.trim().length === 0;
+          };
+          ta.addEventListener("input", refresh, { passive:true });
+          setTimeout(() => { refresh(); ta.focus(); }, 0);
+
+          setModalNav(false, true);
+          modalNext.textContent = "Finalizar";
+          modalNext.disabled = true;
+
+          modalNext.onclick = () => {
+            informe = U(ta.value, 1000);
+            closeModal();
+            finalizeDisponibles();
+          };
           return;
         }
       }
 
-      if(modalFlow === "material"){
-        modalTitle.textContent = "Material de intervención usado";
-        modalDesc.textContent = "Selecciona opciones (multi-selección).";
+      function resetButtons(){
+        btnA.disabled=false;
+        btnI.disabled=true;
+        btnF.disabled=true;
+        btnD.disabled=true;
+        setStage("activacion");
+      }
 
-        const chips = document.createElement("div");
-        chips.className = "chips";
+      function updateTimerAlertLive(){
+        if(stage === "intervencion" && tA && !tI){
+          const sec = Math.round((Date.now() - tA)/1000);
+          timerEl.classList.toggle("exceeded", sec > TH_ACTIVACION);
+        }else if(stage === "finalizacion" && tI && !tF){
+          const sec = Math.round((Date.now() - tI)/1000);
+          timerEl.classList.toggle("exceeded", sec > TH_INTERVENCION);
+        }else{
+          timerEl.classList.remove("exceeded");
+        }
+      }
 
-        MATERIALES.forEach(name => {
-          const c = document.createElement("div");
-          c.className = "chip whiteChip";
-          c.innerHTML = `<span>${name.toUpperCase()}</span>`;
-          if(materiales.has(name)) c.classList.add("selected");
+      setInterval(updateTimerAlertLive, 500);
 
-          c.onclick = () => {
-            if(materiales.has(name)) materiales.delete(name);
-            else materiales.add(name);
-            if(materiales.size > 1 && materiales.has(PLACEHOLDER_CELL)) materiales.delete(PLACEHOLDER_CELL);
-            c.classList.toggle("selected");
-          };
+      function finalizeActivation(){
+        getLocationOnce(loc => {
+          locA = loc;
+          tA = Date.now();
+          tsA.textContent = timestampES();
 
-          chips.appendChild(c);
+          sendToVISOR("ACTIVACION", locA, getHeaderLabel());
+
+          btnA.disabled = true;
+          btnI.disabled = false;
+          setStage("intervencion");
         });
-
-        modalBody.appendChild(chips);
-
-        setModalNav(false, true);
-        modalNext.textContent = "Confirmar";
-        modalNext.disabled = false;
-        modalNext.onclick = () => { closeModal(); finalizeFinalizacion(); };
-        return;
       }
 
-      if(modalFlow === "informe"){
-        modalTitle.textContent = "Informe final";
-        modalDesc.textContent = "Texto largo (máx 1000 caracteres).";
+      btnI.addEventListener("click", () => {
+        ensureTimerRunning();
+        getLocationOnce(loc => {
+          locI = loc;
+          tI = Date.now();
+          tsI.textContent = timestampES();
 
-        const wrap = document.createElement("div");
-        wrap.className = "field";
-        wrap.innerHTML = `
-          <textarea id="informeInput" class="input" maxlength="1000" rows="6" placeholder="ESCRIBE EL INFORME..."></textarea>
-          <div class="help"><span id="infCount">0</span>/1000</div>
-        `;
-        modalBody.appendChild(wrap);
+          sendToVISOR("INTERVENCION", locI, getHeaderLabel());
 
-        const ta = wrap.querySelector("#informeInput");
-        const cnt = wrap.querySelector("#infCount");
-        const refresh = () => {
-          cnt.textContent = ta.value.length;
-          modalNext.disabled = ta.value.trim().length === 0;
-        };
-        ta.addEventListener("input", refresh);
-        setTimeout(() => { refresh(); ta.focus(); }, 0);
+          btnI.disabled = true;
+          btnF.disabled = false;
+          setStage("finalizacion");
+        });
+      }, { passive:true });
 
-        setModalNav(false, true);
-        modalNext.textContent = "Finalizar";
-        modalNext.disabled = true;
+      btnF.addEventListener("click", () => {
+        ensureTimerRunning();
+        openModal("material");
+      }, { passive:true });
 
-        modalNext.onclick = () => {
-          informe = U(ta.value, 1000);
-          closeModal();
-          finalizeDisponibles();
-        };
-        return;
+      function finalizeFinalizacion(){
+        getLocationOnce(loc => {
+          locF = loc;
+          tF = Date.now();
+          tsF.textContent = timestampES();
+
+          sendToVISOR("FINALIZACION", locF, getHeaderLabel());
+
+          btnF.disabled = true;
+          btnD.disabled = false;
+          setStage("disponibles");
+        });
       }
-    }
 
-    function resetButtons(){
-      btnA.disabled=false;
-      btnI.disabled=true;
-      btnF.disabled=true;
-      btnD.disabled=true;
-      setStage("activacion");
-    }
+      btnD.addEventListener("click", () => {
+        ensureTimerRunning();
+        getLocationOnce(loc => {
+          locD = loc;
+          tD = Date.now();
+          tsD.textContent = timestampES();
 
-    function updateTimerAlertLive(){
-      if(stage === "intervencion" && tA && !tI){
-        const sec = Math.round((Date.now() - tA)/1000);
-        timerEl.classList.toggle("exceeded", sec > TH_ACTIVACION);
-      }else if(stage === "finalizacion" && tI && !tF){
-        const sec = Math.round((Date.now() - tI)/1000);
-        timerEl.classList.toggle("exceeded", sec > TH_INTERVENCION);
-      }else{
-        timerEl.classList.remove("exceeded");
+          sendToVISOR("DISPONIBLES", locD, getHeaderLabel());
+
+          openModal("informe");
+        });
+      }, { passive:true });
+
+      function finalizeDisponibles(){
+        sendCycleToSheet();
+        stopTimerAndReset();
+        resetButtons();
       }
-    }
 
-    setInterval(updateTimerAlertLive, 500);
+      btnA.addEventListener("click", () => {
+        resetCycleDataForNewRun();
+        ensureTimerRunning();
+        openModal("activation");
+      }, { passive:true });
 
-    function finalizeActivation(){
-      getLocationOnce(loc => {
-        locA = loc;
-        tA = Date.now();
-        tsA.textContent = timestampES();
-
-        __sendToVISOR("ACTIVACION", locA, headerTitleEl ? headerTitleEl.textContent : document.title);
-
-        btnA.disabled = true;
-        btnI.disabled = false;
-        setStage("intervencion");
-      });
-    }
-
-    btnI.addEventListener("click", () => {
-      ensureTimerRunning();
-      getLocationOnce(loc => {
-        locI = loc;
-        tI = Date.now();
-        tsI.textContent = timestampES();
-
-        __sendToVISOR("INTERVENCION", locI, headerTitleEl ? headerTitleEl.textContent : document.title);
-
-        btnI.disabled = true;
-        btnF.disabled = false;
-        setStage("finalizacion");
-      });
-    });
-
-    btnF.addEventListener("click", () => {
-      ensureTimerRunning();
-      openModal("material");
-    });
-
-    function finalizeFinalizacion(){
-      getLocationOnce(loc => {
-        locF = loc;
-        tF = Date.now();
-        tsF.textContent = timestampES();
-
-        __sendToVISOR("FINALIZACION", locF, headerTitleEl ? headerTitleEl.textContent : document.title);
-
-        btnF.disabled = true;
-        btnD.disabled = false;
-        setStage("disponibles");
-      });
-    }
-
-    btnD.addEventListener("click", () => {
-      ensureTimerRunning();
-      getLocationOnce(loc => {
-        locD = loc;
-        tD = Date.now();
-        tsD.textContent = timestampES();
-
-        __sendToVISOR("DISPONIBLES", locD, headerTitleEl ? headerTitleEl.textContent : document.title);
-
-        openModal("informe");
-      });
-    });
-
-    function finalizeDisponibles(){
-      sendCycleToSheet();
-      stopTimerAndReset();
       resetButtons();
-    }
-
-    btnA.addEventListener("click", () => {
-      resetCycleDataForNewRun();
-      ensureTimerRunning();
-      openModal("activation");
-    });
-
-    resetButtons();
-    stopTimerAndReset();
+      stopTimerAndReset();
+    })();
   </script>
 </body>
 </html>

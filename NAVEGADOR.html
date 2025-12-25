@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- :contentReference[oaicite:0]{index=0} -->
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -572,7 +571,6 @@
       let myMarker = null;
       let myAccuracyCircle = null;
       let lastLatLng = null;
-      let prevLatLng = null;
       let lastBearing = NaN;
       let compassBearing = NaN;
 
@@ -807,7 +805,6 @@
       };
 
       const proj = (ll) => map.options.crs.project(ll);
-      const projPt = (ll) => map.options.crs.project(ll);
 
       const closestPointOnSegment = (P, A, B) => {
         const abx = B.x - A.x, aby = B.y - A.y;
@@ -885,11 +882,11 @@
 
       const lineIntersectsPolyline = (fromLatLng, toLatLng, latlngs) => {
         if (!fromLatLng || !toLatLng || !latlngs || latlngs.length < 2) return false;
-        const A = projPt(fromLatLng);
-        const B = projPt(toLatLng);
+        const A = proj(fromLatLng);
+        const B = proj(toLatLng);
         for (let i = 0; i < latlngs.length - 1; i++) {
-          const C = projPt(latlngs[i]);
-          const D = projPt(latlngs[i + 1]);
+          const C = proj(latlngs[i]);
+          const D = proj(latlngs[i + 1]);
           if (segIntersect2(A, B, C, D)) return true;
         }
         return false;
@@ -898,7 +895,7 @@
       const posFromS = (latlngs, cum, s) => {
         if (!latlngs || latlngs.length < 2 || !cum || cum.length !== latlngs.length) return null;
         const total = cum[cum.length - 1] || 0;
-        let ss = Math.max(0, Math.min(total, s || 0));
+        const ss = Math.max(0, Math.min(total, s || 0));
 
         let i = 0;
         while (i < cum.length - 2 && cum[i + 1] < ss) i++;
@@ -906,8 +903,8 @@
         const segLen = latlngs[i].distanceTo(latlngs[i + 1]) || 0;
         const t = segLen > 0 ? (ss - cum[i]) / segLen : 0;
 
-        const A = projPt(latlngs[i]);
-        const B = projPt(latlngs[i + 1]);
+        const A = proj(latlngs[i]);
+        const B = proj(latlngs[i + 1]);
         const x = A.x + (B.x - A.x) * t;
         const y = A.y + (B.y - A.y) * t;
 
@@ -1350,8 +1347,6 @@
         const { latitude, longitude, accuracy, heading } = pos.coords;
 
         const nextLatLng = L.latLng(latitude, longitude);
-        const prev = lastLatLng;
-        prevLatLng = prev;
         lastLatLng = nextLatLng;
 
         let bearing = (typeof heading === "number" && isFinite(heading)) ? heading : NaN;
