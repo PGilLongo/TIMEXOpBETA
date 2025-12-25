@@ -255,9 +255,10 @@
 
     .me-static-img img{ display:block; background: transparent; }
 
-    /* ====== ROTACIÓN DEL MAPA ====== */
-    #map .leaflet-pane,
-    #map .leaflet-control-container{
+    /* ====== ROTACIÓN DEL MAPA ======
+       CAMBIO: NO rotar el contenedor de controles (incluida la barra inferior/atribución).
+       Solo rota el pane del mapa (tiles/overlays). */
+    #map .leaflet-pane{
       transform-origin: 50% 50%;
     }
 
@@ -271,7 +272,7 @@
       transform-origin:50% 50%;
       will-change:transform;
       transition: transform 180ms ease-out;
-      pointer-events: auto; /* permite interactuar con controles */
+      pointer-events: auto; /* el pane sigue siendo interactivo */
     }
 
     #map.is-zooming .map-rotator{
@@ -407,14 +408,13 @@
       map.on("zoomstart", () => { mapEl.classList.add("is-zooming"); });
       map.on("zoomend",   () => { mapEl.classList.remove("is-zooming"); });
 
-      // Wrapper robusto para rotación del mapa (pane + controles)
+      // Wrapper robusto para rotación del mapa (SOLO EL PANE DEL MAPA, NO LOS CONTROLES)
       (function ensureMapRotator(){
         const container = map.getContainer();
         if (!container) return;
         let rot = container.querySelector(":scope > .map-rotator");
         const pane = container.querySelector(":scope > .leaflet-pane");
-        const ctrl = container.querySelector(":scope > .leaflet-control-container");
-        if (!pane || !ctrl) return;
+        if (!pane) return;
 
         if (!rot){
           rot = document.createElement("div");
@@ -422,7 +422,6 @@
           container.insertBefore(rot, pane);
         }
         if (pane.parentElement !== rot) rot.appendChild(pane);
-        if (ctrl.parentElement !== rot) rot.appendChild(ctrl);
       })();
 
       const overlays = {};
@@ -1011,7 +1010,7 @@
         if (followChk.checked) {
           const b = (typeof bearing === "number" && isFinite(bearing)) ? bearing : lastBearing;
           if (typeof b === "number" && isFinite(b)) {
-            setMapRotationDegrees(b); // SOLO rota el mapa
+            setMapRotationDegrees(b); // SOLO rota el mapa (tiles/overlays), no la barra inferior/controles
           }
         } else {
           clearMapRotation();
