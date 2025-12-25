@@ -23,25 +23,40 @@
         }).addTo(map);
 
         let userMarker = L.marker([0, 0]).addTo(map);
-        let userLocation = null;
+        let lastPosition = null;
+
+        // Función para calcular el rumbo entre dos puntos geográficos
+        function calculateHeading(lat1, lon1, lat2, lon2) {
+            const rad = Math.PI / 180;
+            lat1 *= rad;
+            lon1 *= rad;
+            lat2 *= rad;
+            lon2 *= rad;
+
+            const dLon = lon2 - lon1;
+            const y = Math.sin(dLon) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            const heading = Math.atan2(y, x);
+            return (heading * 180 / Math.PI + 360) % 360; // Convertir a grados y asegurar valor entre 0-360
+        }
 
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(function(position) {
-                let lat = position.coords.latitude;
-                let lon = position.coords.longitude;
-                let accuracy = position.coords.accuracy;
-                let heading = position.coords.heading;
-
-                if (userLocation === null) {
-                    userLocation = L.latLng(lat, lon);
-                    map.setView(userLocation, 13);
-                }
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
 
                 userMarker.setLatLng([lat, lon]);
 
-                if (heading !== null) {
-                    map.setBearing(heading);
+                // Actualizar la vista del mapa con la ubicación actual
+                map.setView([lat, lon], 13);
+
+                // Calcular el rumbo si tenemos una posición anterior
+                if (lastPosition) {
+                    const heading = calculateHeading(lastPosition.lat, lastPosition.lon, lat, lon);
+                    map.setBearing(heading);  // Rotar el mapa según el rumbo calculado
                 }
+
+                lastPosition = { lat, lon };  // Guardar la posición actual para la próxima iteración
             }, function(error) {
                 console.error("Error obteniendo ubicación:", error);
             }, {
