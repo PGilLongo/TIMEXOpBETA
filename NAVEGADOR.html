@@ -1,481 +1,57 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NAVEGADOR</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body { height: 100%; margin: 0; }
-    #map { height: 100%; width: 100%; }
-
-    .hud{
-      transform: scale(.9);
-      transform-origin: top left;
-      position: absolute;
-      z-index: 9999;
-      top: 12px;
-      left: 12px;
-      background: rgba(255,255,255,.92);
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      font-size: 12px;
-      box-shadow: 0 6px 18px rgba(0,0,0,.15);
-    }
-
-    .rotate {
-      transform-origin: 50% 50%;
-    }
-
-    .map-rotator {
-      position: absolute;
-      inset: 0;
-      transform-origin: 50% 50%;
-      will-change: transform;
-    }
-
-    .me-static-wrap {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .me-static-dot {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 14px;
-      height: 14px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: #2b6cff;
-      border: 3px solid #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,.35);
-    }
-
-    .me-static-img {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      overflow: hidden;
-      background: transparent;
-    }
-
-    .me-static-img img {
-      display: block;
-      background: transparent;
-    }
-
-    /* Rotación del mapa */
-    #map .leaflet-pane,
-    #map .leaflet-control-container {
-      transform-origin: 50% 50%;
-    }
-    #map.rotate .map-rotator {
-      transform: rotate(var(--map-rot, 0deg)) scale(var(--map-scale, 1));
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAVEGADOR</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 100vh;
+        }
+    </style>
 </head>
 <body>
-  <div class="hud" id="hud">
-    <div class="hud-header">
-      <div class="row">
-        <button id="recenterBtn" type="button">Centrarme</button>
-        <button id="fitAllBtn" type="button">Ver todo</button>
+    <div id="map"></div>
 
-        <label class="follow">
-          <input id="followChk" type="checkbox" checked />
-          seguirme
-        </label>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([0, 0], 13);
 
-        <button id="chooseFilesBtn" type="button" class="file-btn">Elegir archivos</button>
-      </div>
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-      <button id="hudToggleBtn" class="hud-toggle" type="button" aria-label="Minimizar panel" title="Minimizar / expandir">▾</button>
-    </div>
-
-    <div class="hud-body">
-      <div class="search-wrap">
-        <input id="searchBox" type="search" placeholder="Buscar punto por nombre…" autocomplete="off" />
-        <button id="clearRouteBtn" type="button" title="Quitar la ruta actual">Quitar ruta</button>
-      </div>
-
-      <div id="results" aria-label="Resultados de búsqueda"></div>
-
-      <div class="icon-wrap">
-        <select id="kmzSelect" title="Selecciona el KMZ al que aplicar el icono" disabled>
-          <option value="">KMZ: (ninguno)</option>
-        </select>
-        <input id="iconUrl" type="url" placeholder="URL directa del icono (png/svg/webp)…" inputmode="url" autocomplete="off" />
-        <button id="applyIconBtn" type="button" title="Aplicar icono al KMZ seleccionado">Aplicar icono</button>
-        <button id="resetIconBtn" type="button" title="Volver al punto de color">Punto</button>
-        <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">🗑️ Borrar KMZ</button>
-        <button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
-        <button id="sizeUpBtn" type="button" class="size-btn" title="Icono más grande">+</button>
-      </div>
-
-      <div class="me-icon-wrap">
-        <input id="meIconUrl" type="url" placeholder="Icono ubicación (URL)…" inputmode="url" autocomplete="off" />
-        <button id="applyMeIconBtn" type="button" title="Aplicar icono a tu ubicación">Aplicar</button>
-        <button id="meSizeDownBtn" type="button" class="size-btn" title="Icono ubicación más pequeño">−</button>
-        <button id="meSizeUpBtn" type="button" class="size-btn" title="Icono ubicación más grande">+</button>
-      </div>
-
-      <div class="sheet-wrap">
-        <input id="sheetsEndpoint" type="url" placeholder="URL WebApp Sheets…" inputmode="url" autocomplete="off" />
-        <input id="sheetsToken" type="text" placeholder="Token Sheets…" autocomplete="off" />
-        <button id="saveSheetsBtn" type="button" title="Guardar configuración">Guardar</button>
-        <span id="sheetsStatus" class="status" aria-live="polite"></span>
-      </div>
-    </div>
-
-    <input type="file" id="kmzFile" accept=".kmz" multiple />
-  </div>
-
-  <div id="map"></div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js"></script>
-
-  <script>
-    (() => {
-      "use strict";
-
-      const $ = (id) => document.getElementById(id);
-
-      const followChk = $("followChk");
-      const recenterBtn = $("recenterBtn");
-      const fitAllBtn = $("fitAllBtn");
-      const kmzInput = $("kmzFile");
-      const chooseFilesBtn = $("chooseFilesBtn");
-      const hudEl = $("hud");
-      const hudToggleBtn = $("hudToggleBtn");
-
-      const searchBox = $("searchBox");
-      const resultsEl = $("results");
-      const clearRouteBtn = $("clearRouteBtn");
-
-      const kmzSelect = $("kmzSelect");
-      const iconUrlInput = $("iconUrl");
-      const applyIconBtn = $("applyIconBtn");
-      const resetIconBtn = $("resetIconBtn");
-      const sizeUpBtn = $("sizeUpBtn");
-      const sizeDownBtn = $("sizeDownBtn");
-      const deleteKmzBtn = $("deleteKmzBtn");
-
-      const meIconUrlInput = $("meIconUrl");
-      const applyMeIconBtn = $("applyMeIconBtn");
-      const sheetsEndpointInput = $("sheetsEndpoint");
-      const sheetsTokenInput = $("sheetsToken");
-      const saveSheetsBtn = $("saveSheetsBtn");
-      const sheetsStatusEl = $("sheetsStatus");
-
-      const meSizeUpBtn = $("meSizeUpBtn");
-      const meSizeDownBtn = $("meSizeDownBtn");
-
-      const KMZ_DB_NAME = "kmz_navegador_db";
-      const KMZ_DB_VERSION = 1;
-      const KMZ_STORE = "kmzFiles";
-      const LS_KMZ_META_KEY = "kmz_meta_v1";
-      const LS_ME_ICON_KEY = "me_icon_v1";
-      const LS_SHEETS_KEY = "sheets_push_v1";
-      const LS_HUD_MIN_KEY = "hud_minimized_v1";
-      const DEFAULT_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyVoOiNjza3_21FpJ1C8gQeHahU_l_-8-5kBfxtjNVP3xAsrld38cakJvhOwkUZ-jH9zQ/exec";
-
-      const poiIndex = [];
-      const trackIndex = [];
-
-      // Crear mapa sin controles de zoom
-      const map = L.map("map", { zoomControl: false }).setView([40.4168, -3.7038], 6);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
-
-      // Wrapper para rotación del mapa sin interferir con los transforms internos de Leaflet
-      const mapRotWrap = (() => {
-        try {
-          const container = map.getContainer();
-          const pane = map.getPane("mapPane");
-          if (!container || !pane || pane.parentElement?.classList?.contains("map-rotator")) {
-            const wrap = document.createElement("div");
-            wrap.className = "map-rotator";
-            pane.parentElement?.insertBefore(wrap, pane);
-            wrap.appendChild(pane);
-            return wrap;
-          }
-          return pane.parentElement;
-        } catch { return null; }
-      })();
-
-      let myMarker = null;
-      let myAccuracyCircle = null;
-      let lastLatLng = null;
-      let prevLatLng = null;
-      let lastBearing = NaN;
-      let compassBearing = NaN;
-      const posHistory = [];
-      const MAX_HISTORY_MS = 12000; // para calcular rumbo estable
-
-      let firstFix = true;
-
-      let meIconUrl = "";
-      let meIconSize = 14;
-
-      // Rumbo por brújula (DeviceOrientation) como fallback
-      (function initCompass() {
-        const handler = (ev) => {
-          let hd = NaN;
-          if (typeof ev.webkitCompassHeading === "number" && isFinite(ev.webkitCompassHeading)) {
-            hd = ev.webkitCompassHeading;
-          } else if (typeof ev.alpha === "number" && isFinite(ev.alpha)) {
-            if (ev.absolute === true) hd = (360 - ev.alpha) % 360;
-          }
-          if (typeof hd === "number" && isFinite(hd)) compassBearing = hd;
-        };
-
-        try {
-          window.addEventListener("deviceorientationabsolute", handler, { passive: true });
-          window.addEventListener("deviceorientation", handler, { passive: true });
-        } catch {}
-      })();
-
-      const setMapRotationDegrees = (deg) => {
-        const d = (typeof deg === "number" && isFinite(deg)) ? deg : 0;
-        mapRotTarget = -d;  // Rotamos el mapa en sentido contrario a la dirección del movimiento
-        while (mapRotTarget > 180) mapRotTarget -= 360;
-        while (mapRotTarget < -180) mapRotTarget += 360;
-        if (!mapRotRaf) mapRotRaf = requestAnimationFrame(animateMapRotation);
-      };
-
-      const animateMapRotation = () => {
-        mapRotRaf = 0;
-        const diff = mapRotTarget - mapRotDeg;
-        mapRotDeg = Math.abs(diff) < 0.5 ? mapRotTarget : (mapRotDeg + diff * 0.18);
-
-        const abs = Math.abs(mapRotDeg);
-        const scale = abs > 1 ? 1.12 : 1.0;
-
-        mapEl.classList.add("rotate");
-        mapEl.style.setProperty("--map-rot", `${mapRotDeg}deg`);
-        mapEl.style.setProperty("--map-scale", `${scale}`);
-
-        if (Math.abs(mapRotTarget - mapRotDeg) >= 0.5) {
-          mapRotRaf = requestAnimationFrame(animateMapRotation);
-        }
-      };
-
-      const clearMapRotation = () => {
-        mapRotTarget = 0;
-        mapRotDeg = 0;
-        mapEl.style.setProperty("--map-rot", "0deg");
-        mapEl.style.setProperty("--map-scale", "1");
-        mapEl.classList.remove("rotate");
-      };
-
-      const updateMyLocation = (pos) => {
-        const { latitude, longitude, accuracy, heading } = pos.coords;
-
-        const nextLatLng = L.latLng(latitude, longitude);
-        lastLatLng = nextLatLng;
-
-        let bearing = (typeof heading === "number" && isFinite(heading)) ? heading : NaN;
-
-        if (!isFinite(bearing)) {
-          bearing = lastBearing;
-        }
-
-        if (isFinite(bearing)) lastBearing = bearing;
-
-        if (!myMarker) {
-          myMarker = L.marker(lastLatLng, { icon: makeMeStaticIcon(meIconUrl, meIconSize) }).addTo(map);
-        } else {
-          myMarker.setLatLng(lastLatLng);
-          myMarker.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        }
-
-        if (followChk.checked) {
-          setMapRotationDegrees(bearing); // Aplica la rotación al mapa
-        } else {
-          clearMapRotation();
-        }
-
-        if (firstFix) {
-          map.setView(lastLatLng, 17);  // Centra el mapa en la ubicación inicial
-          firstFix = false;
-        } else if (followChk.checked) {
-          map.panTo(lastLatLng, { animate: true });
-        }
-      };
-
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(updateMyLocation, () => {}, {
-          enableHighAccuracy: true,
-          maximumAge: 1000,
-          timeout: 10000
-        });
-      }
-
-      const init = () => {
-        try {
-          const v = localStorage.getItem(LS_HUD_MIN_KEY);
-          if (v === "1") setHudMinimized(true);
-        } catch {}
-
-        const mePrefs = loadMeIconPrefs();
-        if (mePrefs && typeof mePrefs === "object") {
-          if (typeof mePrefs.url === "string") meIconUrl = mePrefs.url;
-          if (typeof mePrefs.size === "number" && isFinite(mePrefs.size)) {
-            meIconSize = Math.max(6, Math.min(96, Math.round(mePrefs.size)));
-          }
-        }
-        meIconUrlInput.value = meIconUrl || "";
-
-        const sp = loadSheetsPrefs();
-        if (sp && typeof sp === "object") {
-          if (typeof sp.endpoint === "string") sheetsEndpoint = sp.endpoint.trim();
-          if (typeof sp.token === "string") sheetsToken = sp.token.trim();
-        }
-        if (!sheetsEndpoint) sheetsEndpoint = DEFAULT_SHEETS_ENDPOINT;
-        if (sheetsEndpointInput) sheetsEndpointInput.value = sheetsEndpoint || "";
-        if (sheetsTokenInput) sheetsTokenInput.value = sheetsToken || "";
-
-        try { await restorePersistedKmz(); } catch {}
-        ensureKmzSelectEnabled();
-
-        const entry = getKmzEntryByLabel(kmzSelect.value);
-        if (entry) iconUrlInput.value = entry.iconUrl || "";
+        let userMarker = L.marker([0, 0]).addTo(map);
+        let userLocation = null;
 
         if (navigator.geolocation) {
-          navigator.geolocation.watchPosition(updateMyLocation, () => {}, {
-            enableHighAccuracy: true,
-            maximumAge: 1000,
-            timeout: 10000
-          });
-        }
-      };
+            navigator.geolocation.watchPosition(function(position) {
+                let lat = position.coords.latitude;
+                let lon = position.coords.longitude;
+                let accuracy = position.coords.accuracy;
+                let heading = position.coords.heading;
 
-      followChk.addEventListener("change", () => {
-        if (followChk.checked) {
-          const b = (typeof lastBearing === "number" && isFinite(lastBearing))
-            ? lastBearing
-            : ((typeof compassBearing === "number" && isFinite(compassBearing)) ? compassBearing : NaN);
-          if (typeof b === "number" && isFinite(b)) setMapRotationDegrees(b);
+                if (userLocation === null) {
+                    userLocation = L.latLng(lat, lon);
+                    map.setView(userLocation, 13);
+                }
+
+                userMarker.setLatLng([lat, lon]);
+
+                if (heading !== null) {
+                    map.setBearing(heading);
+                }
+            }, function(error) {
+                console.error("Error obteniendo ubicación:", error);
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
+            });
         } else {
-          clearMapRotation();
+            alert("Geolocalización no soportada por este navegador.");
         }
-      });
-
-      hudToggleBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        setHudMinimized(!hudEl.classList.contains("minimized"));
-      });
-
-      chooseFilesBtn.addEventListener("click", () => kmzInput.click());
-
-      clearRouteBtn.addEventListener("click", clearRoute);
-
-      searchBox.addEventListener("input", doSearch);
-      searchBox.addEventListener("focus", doSearch);
-
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest?.(".hud")) setResultsVisible(false);
-      });
-
-      recenterBtn.addEventListener("click", () => {
-        if (lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(), 17));
-      });
-
-      fitAllBtn.addEventListener("click", () => {
-        let bounds = null;
-
-        for (const { layer } of kmzLayersList) {
-          if (!map.hasLayer(layer)) continue;
-          const b = layer.getBounds?.();
-          if (b?.isValid?.()) bounds = bounds ? bounds.extend(b) : b;
-        }
-
-        if (lastLatLng) {
-          const b = L.latLngBounds([lastLatLng, lastLatLng]);
-          bounds = bounds ? bounds.extend(b) : b;
-        }
-
-        if (bounds?.isValid?.()) map.fitBounds(bounds.pad(0.2));
-      });
-
-      applyMeIconBtn.addEventListener("click", () => {
-        const url = meIconUrlInput.value.trim();
-        if (!url) {
-          meIconUrl = "";
-          meIconSize = 14;
-          myMarker?.setIcon(makeMeStaticIcon("", meIconSize));
-          saveMeIconPrefs();
-          return;
-        }
-        meIconUrl = url;
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      saveSheetsBtn.addEventListener("click", () => {
-        sheetsEndpoint = (sheetsEndpointInput.value || "").trim();
-        sheetsToken = (sheetsTokenInput.value || "").trim();
-        saveSheetsPrefs();
-        setSheetsStatus(sheetsEndpoint && sheetsToken ? "Guardado" : "Falta URL/token");
-      });
-
-      meSizeUpBtn.addEventListener("click", () => {
-        if (!meIconUrl) return;
-        meIconSize += 5;
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      meSizeDownBtn.addEventListener("click", () => {
-        if (!meIconUrl) return;
-        meIconSize = Math.max(5, meIconSize - 5);
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      applyIconBtn.addEventListener("click", () => {
-        ensureKmzSelectEnabled();
-        applyIconToKmz(kmzSelect.value, iconUrlInput.value);
-      });
-
-      resetIconBtn.addEventListener("click", () => {
-        ensureKmzSelectEnabled();
-        resetIconToDot(kmzSelect.value);
-      });
-
-      sizeUpBtn.addEventListener("click", () => resizeKmzIcon(kmzSelect.value, +5));
-      sizeDownBtn.addEventListener("click", () => resizeKmzIcon(kmzSelect.value, -5));
-
-      kmzSelect.addEventListener("change", () => {
-        const entry = getKmzEntryByLabel(kmzSelect.value);
-        iconUrlInput.value = entry?.iconUrl || "";
-      });
-
-      deleteKmzBtn.addEventListener("click", async () => {
-        const label = kmzSelect.value;
-        if (!label) return;
-        if (confirm("¿Borrar este KMZ definitivamente?")) await deleteSelectedKmz();
-      });
-
-      kmzInput.addEventListener("change", async (e) => {
-        const files = Array.from(e.target.files || []);
-        for (const f of files) {
-          try { await loadKmzFile(f); } catch {}
-        }
-        kmzInput.value = "";
-      });
-
-      init();
-    })();
-  </script>
+    </script>
 </body>
 </html>
