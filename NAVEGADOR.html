@@ -1,12 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NAVEGADOR</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>NAVEGADOR</title>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+<style>
     html, body { height: 100%; margin: 0; }
     #map { height: 100%; width: 100%; }
 
@@ -259,68 +259,56 @@
   </style>
 </head>
 <body>
-  <div class="hud" id="hud">
-    <div class="hud-header">
-      <div class="row">
-        <button id="recenterBtn" type="button">Centrarme</button>
-        <button id="fitAllBtn" type="button">Ver todo</button>
-
-        <label class="follow">
-          <input id="followChk" type="checkbox" checked />
+<div class="hud" id="hud">
+<div class="hud-header">
+<div class="row">
+<button id="recenterBtn" type="button">Centrarme</button>
+<button id="fitAllBtn" type="button">Ver todo</button>
+<label class="follow">
+<input checked="" id="followChk" type="checkbox"/>
           seguirme
         </label>
-
-        <button id="chooseFilesBtn" type="button" class="file-btn">Elegir archivos</button>
-      </div>
-
-      <button id="hudToggleBtn" class="hud-toggle" type="button" aria-label="Minimizar panel" title="Minimizar / expandir">▾</button>
-    </div>
-
-    <div class="hud-body">
-      <div class="search-wrap">
-        <input id="searchBox" type="search" placeholder="Buscar punto por nombre…" autocomplete="off" />
-        <button id="clearRouteBtn" type="button" title="Quitar la ruta actual">Quitar ruta</button>
-      </div>
-
-      <div id="results" aria-label="Resultados de búsqueda"></div>
-
-      <div class="icon-wrap">
-        <select id="kmzSelect" title="Selecciona el KMZ al que aplicar el icono" disabled>
-          <option value="">KMZ: (ninguno)</option>
-        </select>
-        <input id="iconUrl" type="url" placeholder="URL directa del icono (png/svg/webp)…" inputmode="url" autocomplete="off" />
-        <button id="applyIconBtn" type="button" title="Aplicar icono al KMZ seleccionado">Aplicar icono</button>
-        <button id="resetIconBtn" type="button" title="Volver al punto de color">Punto</button>
-        <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">🗑️ Borrar KMZ</button>
-        <button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
-        <button id="sizeUpBtn" type="button" class="size-btn" title="Icono más grande">+</button>
-      </div>
-
-      <div class="me-icon-wrap">
-        <input id="meIconUrl" type="url" placeholder="Icono ubicación (URL)…" inputmode="url" autocomplete="off" />
-        <button id="applyMeIconBtn" type="button" title="Aplicar icono a tu ubicación">Aplicar</button>
-        <button id="meSizeDownBtn" type="button" class="size-btn" title="Icono ubicación más pequeño">−</button>
-        <button id="meSizeUpBtn" type="button" class="size-btn" title="Icono ubicación más grande">+</button>
-      </div>
-
-      <div class="sheet-wrap">
-        <input id="sheetsEndpoint" type="url" placeholder="URL WebApp Sheets…" inputmode="url" autocomplete="off" />
-        <input id="sheetsToken" type="text" placeholder="Token Sheets…" autocomplete="off" />
-        <button id="saveSheetsBtn" type="button" title="Guardar configuración">Guardar</button>
-        <span id="sheetsStatus" class="status" aria-live="polite"></span>
-      </div>
-    </div>
-
-    <input type="file" id="kmzFile" accept=".kmz" multiple />
-  </div>
-
-  <div id="map"></div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js"></script>
-
-  <script>
+<button class="file-btn" id="chooseFilesBtn" type="button">Elegir archivos</button>
+</div>
+<button aria-label="Minimizar panel" class="hud-toggle" id="hudToggleBtn" title="Minimizar / expandir" type="button">▾</button>
+</div>
+<div class="hud-body">
+<div class="search-wrap">
+<input autocomplete="off" id="searchBox" placeholder="Buscar punto por nombre…" type="search"/>
+<button id="clearRouteBtn" title="Quitar la ruta actual" type="button">Quitar ruta</button>
+</div>
+<div aria-label="Resultados de búsqueda" id="results"></div>
+<div class="icon-wrap">
+<select disabled="" id="kmzSelect" title="Selecciona el KMZ al que aplicar el icono">
+<option value="">KMZ: (ninguno)</option>
+</select>
+<input autocomplete="off" id="iconUrl" inputmode="url" placeholder="URL directa del icono (png/svg/webp)…" type="url"/>
+<button id="applyIconBtn" title="Aplicar icono al KMZ seleccionado" type="button">Aplicar icono</button>
+<button id="resetIconBtn" title="Volver al punto de color" type="button">Punto</button>
+<button id="deleteKmzBtn" title="Borrar KMZ seleccionado" type="button">🗑️ Borrar KMZ</button>
+<button class="size-btn" id="sizeDownBtn" title="Icono más pequeño" type="button">−</button>
+<button class="size-btn" id="sizeUpBtn" title="Icono más grande" type="button">+</button>
+</div>
+<div class="me-icon-wrap">
+<input autocomplete="off" id="meIconUrl" inputmode="url" placeholder="Icono ubicación (URL)…" type="url"/>
+<button id="applyMeIconBtn" title="Aplicar icono a tu ubicación" type="button">Aplicar</button>
+<button class="size-btn" id="meSizeDownBtn" title="Icono ubicación más pequeño" type="button">−</button>
+<button class="size-btn" id="meSizeUpBtn" title="Icono ubicación más grande" type="button">+</button>
+</div>
+<div class="sheet-wrap">
+<input autocomplete="off" id="sheetsEndpoint" inputmode="url" placeholder="URL WebApp Sheets…" type="url"/>
+<input autocomplete="off" id="sheetsToken" placeholder="Token Sheets…" type="text"/>
+<button id="saveSheetsBtn" title="Guardar configuración" type="button">Guardar</button>
+<span aria-live="polite" class="status" id="sheetsStatus"></span>
+</div>
+</div>
+<input accept=".kmz" id="kmzFile" multiple="" type="file"/>
+</div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js"></script>
+<script>
     (() => {
       "use strict";
 
@@ -1162,6 +1150,6 @@
       init();
     })();
   </script>
-  <script src="timex_visor_bridge.js"></script>
+<script src="timex_visor_bridge.js"></script>
 </body>
 </html>
