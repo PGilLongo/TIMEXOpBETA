@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>BOMBA URBANA LIGERA</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
   <style>
     :root{
       --bg:#0f1115;
@@ -61,20 +57,6 @@
     body.theme-finalizacion .app{ border-color: rgba(46,194,126,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(46,194,126,.18) inset; }
     body.theme-disponibles .app{ border-color: rgba(28,113,216,.55); box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 0 2px rgba(28,113,216,.18) inset; }
 
-    .hero{
-      width:100%;
-      height:clamp(120px, 22vw, 220px);
-      border-bottom:1px solid var(--line);
-      background:#000;
-      overflow:hidden;
-    }
-    .hero img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-
     header{
       padding:clamp(12px, 2.6vw, 16px);
       border-bottom:1px solid var(--line);
@@ -98,8 +80,6 @@
     }
     .topActions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;}
     .pill{font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;white-space:nowrap;background:rgba(0,0,0,.18);}
-    .actionBtn{font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;}
-    .actionBtn:active{transform:translateY(1px)}
 
     .timer{
       font-size:clamp(16px, 3.4vw, 18px);
@@ -142,48 +122,6 @@
     }
     .label{font-size:11px;color:var(--muted)}
     .ts{font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-
-    .panel{border-top:1px solid var(--line);display:none;background:var(--card);}
-    .panelHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;flex-wrap:wrap;}
-    .panelHead h3{margin:0;font-size:14px}
-    .panelActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .smallBtn{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;}
-    .smallBtn:active{transform:translateY(1px)}
-    .log{list-style:none;margin:0;padding:0 16px 12px}
-
-    .log li{
-      display:flex;justify-content:space-between;align-items:center;gap:12px;
-      margin:8px 0;font-size:13px;border:1px solid var(--line);
-      border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.04);
-      flex-wrap:nowrap;min-height:44px;
-    }
-    .log b{letter-spacing:.2px;white-space:nowrap;flex:0 0 auto;}
-    .log span{
-      font-variant-numeric:tabular-nums;color:rgba(255,255,255,.88);text-align:right;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
-      display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 auto;
-    }
-
-    .log li.phase-activacion{background:rgba(246,211,45,.22);border-color:rgba(246,211,45,.45)}
-    .log li.phase-intervencion{background:rgba(224,27,36,.22);border-color:rgba(224,27,36,.45)}
-    .log li.phase-finalizacion{background:rgba(46,194,126,.22);border-color:rgba(46,194,126,.45)}
-    .log li.exceeded{animation: blinkSoft .9s infinite;}
-    .log li.phase-activacion.exceeded{background:rgba(246,211,45,.40);border-color:rgba(246,211,45,.75)}
-    .log li.phase-intervencion.exceeded{background:rgba(224,27,36,.40);border-color:rgba(224,27,36,.75)}
-
-    .servicePill{
-      display:inline-flex;align-items:center;justify-content:flex-end;gap:10px;
-      padding:0;border:0;border-radius:0;background:transparent !important;
-      font-weight:900;font-size:13px;line-height:1;white-space:nowrap;
-      max-width:100%;overflow:hidden;text-overflow:ellipsis;
-    }
-    .servicePill .dot{width:10px;height:10px;border-radius:999px;display:inline-block;flex:0 0 auto;box-shadow:0 0 0 2px rgba(0,0,0,.35);}
-
-    .chartWrap,.mapWrap{margin:8px 16px 16px;border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(0,0,0,.18);}
-    .chartTop,.mapTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
-    .chartTop .hint,.mapTop .hint{font-size:12px;color:var(--muted);line-height:1.25;min-width:220px;}
-    canvas{max-width:100%}
-    #map{width:100%;height:clamp(240px, 42vh, 340px);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.10);}
 
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:clamp(10px, 3vw, 16px);z-index:999;}
     .modal{
@@ -267,13 +205,10 @@
     }
     @media (max-width: 420px){
       .chips{grid-template-columns:1fr;}
-      .chartTop .hint,.mapTop .hint{min-width:0}
-      .hero{height:clamp(110px, 30vw, 190px)}
     }
-  
+
     /* =========================
        COMPACT FIT (AUTO) - reduce height, no vertical scrollbar
-       - Added as overrides to avoid breaking existing layout
        ========================= */
     html,body{height:100%;}
     body{
@@ -294,7 +229,6 @@
     }
     h1{font-size:14px;line-height:1.15}
     .pill{font-size:11px;padding:4px 8px}
-    .actionBtn{font-size:11px;padding:6px 8px}
     .timer{font-size:14px;padding:8px 10px;border-radius:12px}
 
     main{
@@ -306,53 +240,6 @@
     .meta{padding:8px;border-radius:12px;min-height:42px}
     .label{font-size:10px}
     .ts{font-size:12px}
-
-    /* Panel should fit in remaining height */
-    .panel{
-      flex:1 1 auto;
-      min-height:0;
-      overflow:hidden;
-      display:none; /* keep default hidden; toggled by JS */
-    }
-    .panelHead{padding:10px 12px}
-    .panelHead h3{font-size:13px}
-    .smallBtn{font-size:11px;padding:6px 8px;border-radius:10px}
-
-    /* Compact log: 2 columns to reduce height */
-    .log{
-      padding:0 12px 10px;
-      margin:0;
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-      align-content:start;
-    }
-    .log li{
-      margin:0;
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:10px;
-      min-height:36px;
-      gap:8px;
-    }
-    .log b{font-size:11px}
-    .servicePill{font-size:12px}
-
-    /* Put chart + map side-by-side when possible */
-    .chartWrap,.mapWrap{
-      margin:6px 12px 12px;
-      padding:10px;
-      border-radius:12px;
-      width:calc(50% - 18px);
-      display:inline-block;
-      vertical-align:top;
-    }
-    .chartTop .hint,.mapTop .hint{font-size:11px;min-width:0}
-    #map{height:clamp(160px, 28vh, 220px);border-radius:10px}
-    canvas{display:block}
-
-    /* Reduce chart visual height */
-    #chart{height:90px !important;}
 
     /* Modal fits screen without inner scrollbars */
     .overlay{padding:10px}
@@ -373,17 +260,10 @@
     .input{padding:10px 10px;border-radius:10px;font-size:12px}
     textarea.input{min-height:110px}
 
-    @media (max-width: 740px){
-      .log{grid-template-columns:1fr;}
-      .chartWrap,.mapWrap{width:calc(100% - 24px);display:block}
-    }
-
-  
     /* OVERRIDE: ocultar preguntas entre estados */
     .meta{display:none !important;}
-    /* Si hay separadores o ayudas entre estados */
     .label{display:none !important;}
-    </style>
+  </style>
 </head>
 
 <body>
@@ -398,8 +278,7 @@
       <div class="right">
         <div class="topActions">
           <div class="pill" id="status">ACTIVACIÓN</div>
-          <button class="actionBtn" id="toggleLogBtn" type="button" disabled>📋 Ver resultado</button>
-                  </div>
+        </div>
         <div class="timer timer-activacion" id="timer">00:00:00</div>
       </div>
     </header>
@@ -425,33 +304,6 @@
         <div class="meta"><div class="label">Marcador</div><div class="ts" id="tsD">—</div></div>
       </div>
     </main>
-
-    <section class="panel" id="panel">
-      <div class="panelHead">
-        <h3>Resultado del ciclo</h3>
-        <div class="panelActions">
-          <button class="smallBtn" id="copyBtn" type="button">Copiar log</button>
-          <button class="smallBtn" id="hideBtn" type="button">Ocultar</button>
-        </div>
-      </div>
-
-      <ul class="log" id="log"></ul>
-
-      <div class="chartWrap">
-        <div class="chartTop">
-          <div class="hint">Gráfico: ACTIVACIÓN (A→I), INTERVENCIÓN (I→F), FINALIZACIÓN (F→D) + techos</div>
-          <button class="smallBtn" id="dlChartBtn" type="button">Descargar gráfico</button>
-        </div>
-        <canvas id="chart" height="140"></canvas>
-      </div>
-
-      <div class="mapWrap">
-        <div class="mapTop">
-          <div class="hint">Mapa: 4 puntos del ciclo (solo puntos)</div>
-        </div>
-        <div id="map"></div>
-      </div>
-    </section>
   </div>
 
   <div class="overlay" id="overlay">
@@ -479,7 +331,6 @@
     const TH_ACTIVACION = 180;
     const TH_INTERVENCION = 1800;
 
-    
     // ===== SUPABASE (TIMEX -> VISOR entre dispositivos) =====
     const SUPABASE_URL = "https://zacogqlscfdwncugfkko.supabase.co";
     const SUPABASE_KEY = "sb_publishable_5D_QVNyeqroW9tQO_jnmoA_cHS8PXE_";
@@ -555,15 +406,6 @@
     const statusEl = document.getElementById("status");
     const timerEl = document.getElementById("timer");
 
-    const panel = document.getElementById("panel");
-    const logEl = document.getElementById("log");
-    const toggleLogBtn = document.getElementById("toggleLogBtn");
-    const copyBtn = document.getElementById("copyBtn");
-    const hideBtn = document.getElementById("hideBtn");
-    const dlChartBtn = document.getElementById("dlChartBtn");
-
-    const chartCanvas = document.getElementById("chart");
-
     const overlay = document.getElementById("overlay");
     const modalTitle = document.getElementById("modalTitle");
     const modalDesc = document.getElementById("modalDesc");
@@ -572,8 +414,6 @@
     const modalNext = document.getElementById("modalNext");
 
     const headerTitleEl = document.getElementById("headerTitle");
-
-    let chartInstance = null;
 
     let alertante = "";
     let servicio = "—";
@@ -593,9 +433,6 @@
     let pendingServicio = null;
 
     let locA = null, locI = null, locF = null, locD = null;
-    let mapInstance = null;
-    let mapLayerGroup = null;
-
 
     // --- VISOR (envío remoto, NO abre ventanas) ---
     function __sendToVISOR(estado, loc, label){
@@ -619,23 +456,6 @@
         label: (label || document.title || "TIMEX")
       });
     }
-    function setLogVisible(show){
-      panel.style.display = show ? "block" : "none";
-      toggleLogBtn.textContent = show ? "📋 Ocultar resultado" : "📋 Ver resultado";
-
-      if(show){
-        requestAnimationFrame(() => {
-          ensureMap();
-          if(mapInstance) mapInstance.invalidateSize(true);
-          renderCycleMap();
-        });
-      }
-    }
-
-    toggleLogBtn.addEventListener("click", () => {
-      const isVisible = panel.style.display === "block";
-      setLogVisible(!isVisible);
-    });
 
     function applyThemeForStage(next){
       document.body.classList.remove(
@@ -646,11 +466,6 @@
         next === "intervencion" ? "theme-intervencion" :
         next === "finalizacion" ? "theme-finalizacion" : "theme-disponibles"
       );
-    }
-
-    function serviceColor(name){
-      const f = SERVICIOS.find(s => s.name === name);
-      return f ? f.color : "rgba(255,255,255,.28)";
     }
 
     function timestampES(){
@@ -707,8 +522,6 @@
 
     /* =========================
        ✅ FIX GEOLOCALIZACIÓN MÓVIL (MOD: NO “CACHE DIRECTO”)
-       - La caché solo se usa como fallback si fallan los intentos,
-         para evitar que todos los marcadores acaben idénticos “por diseño”.
        ========================= */
 
     let __lastGoodLoc = null;
@@ -784,7 +597,6 @@
 
       console.warn("Geolocalización fallida:", geoErrorToText(lastErr), lastErr);
 
-      // ✅ Fallback: si tenemos una última buena ubicación MUY reciente, úsala aquí
       const now = Date.now();
       if(__lastGoodLoc && (now - __lastGoodLocAt) <= 120000){
         return __lastGoodLoc;
@@ -805,225 +617,12 @@
     }
     /* ===== FIN FIX GEO (MOD) ===== */
 
-    function mapsLink(loc){
-      if(!loc) return "";
-      const q = `${loc.lat},${loc.lon}`;
-      return `https://maps.google.com/?q=${encodeURIComponent(q)}`;
-    }
-
-    function makeEmojiPoint(emoji){
-      const c = document.createElement("canvas");
-      const size = 36;
-      c.width = size;
-      c.height = size;
-      const ctx = c.getContext("2d");
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = "28px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji";
-      ctx.fillText(emoji, size/2, size/2 + 1);
-      return c;
-    }
-
     function computeDeltasSeconds(){
       const activacion = (tA && tI) ? Math.max(0, Math.round((tI - tA)/1000)) : 0;
       const intervencion = (tI && tF) ? Math.max(0, Math.round((tF - tI)/1000)) : 0;
       const finalizacion = (tF && tD) ? Math.max(0, Math.round((tD - tF)/1000)) : 0;
       return { activacion, intervencion, finalizacion };
     }
-
-    function ensureMap(){
-      if(!window.L) return;
-      if(mapInstance) return;
-
-      mapInstance = L.map("map", { zoomControl:true, attributionControl:true });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap"
-      }).addTo(mapInstance);
-
-      mapLayerGroup = L.layerGroup().addTo(mapInstance);
-      mapInstance.setView([40.4168, -3.7038], 5);
-    }
-
-    /* =========================
-       ✅ MOD MAPA: separa marcadores si tienen misma lat/lon
-       - Solo visual (NO toca locA/locI/locF/locD)
-       ========================= */
-
-    function keyLL(lat, lon){
-      return `${lat.toFixed(6)}|${lon.toFixed(6)}`;
-    }
-
-    function offsetSamePoint(lat, lon, idx, total){
-      // ~2-6 metros (aprox). Suficiente para “despegar” el círculo.
-      const base = 0.00003; // ~3m en lat
-      if(total <= 1) return { lat, lon };
-
-      const angle = (Math.PI * 2 * idx) / total;
-      const dLat = Math.cos(angle) * base;
-      // Ajuste simple por latitud para lon
-      const dLon = (Math.sin(angle) * base) / Math.max(0.2, Math.cos(lat * Math.PI/180));
-
-      return { lat: +(lat + dLat).toFixed(6), lon: +(lon + dLon).toFixed(6) };
-    }
-
-    function renderCycleMap(){
-      ensureMap();
-      if(!mapInstance || !mapLayerGroup) return;
-
-      mapLayerGroup.clearLayers();
-
-      const pts = [];
-      if(locA) pts.push({ name:"ACTIVACIÓN", emoji:"🚨", color:"#f6d32d", lat:locA.lat, lon:locA.lon, orig:{...locA} });
-      if(locI) pts.push({ name:"INTERVENCIÓN", emoji:"⚠️", color:"#e01b24", lat:locI.lat, lon:locI.lon, orig:{...locI} });
-      if(locF) pts.push({ name:"FINALIZACIÓN", emoji:"✅", color:"#2ec27e", lat:locF.lat, lon:locF.lon, orig:{...locF} });
-      if(locD) pts.push({ name:"DISPONIBLES", emoji:"🔵", color:"#1c71d8", lat:locD.lat, lon:locD.lon, orig:{...locD} });
-
-      if(!pts.length){
-        mapInstance.setView([40.4168, -3.7038], 5);
-        return;
-      }
-
-      // agrupa duplicados
-      const groups = new Map();
-      pts.forEach(p => {
-        const k = keyLL(p.lat, p.lon);
-        if(!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(p);
-      });
-
-      // aplica offset visual en grupos duplicados
-      const ptsAdj = [];
-      groups.forEach(arr => {
-        const total = arr.length;
-        arr.forEach((p, idx) => {
-          const adj = offsetSamePoint(p.lat, p.lon, idx, total);
-          ptsAdj.push({ ...p, drawLat: adj.lat, drawLon: adj.lon });
-        });
-      });
-
-      ptsAdj.forEach(p => {
-        const m = L.circleMarker([p.drawLat, p.drawLon], {
-          radius: 9,
-          color: p.color,
-          fillColor: p.color,
-          fillOpacity: 0.9,
-          weight: 2
-        }).addTo(mapLayerGroup);
-
-        m.bindTooltip(`${p.emoji} ${p.name}`, { permanent:false, direction:"top" });
-
-        // Popup mostrando coordenada REAL (orig) y link a REAL
-        m.bindPopup(
-          `<b>${p.name}</b><br>${p.orig.lat}, ${p.orig.lon}<br>` +
-          `<a href="${mapsLink({lat:p.orig.lat,lon:p.orig.lon})}" target="_blank" rel="noopener">Abrir en Maps</a>`
-        );
-      });
-
-      const bounds = L.latLngBounds(ptsAdj.map(p => [p.drawLat, p.drawLon]));
-      if(ptsAdj.length === 1){
-        mapInstance.setView(bounds.getCenter(), 17);
-      }else{
-        mapInstance.fitBounds(bounds, { padding:[24,24], maxZoom:19 });
-      }
-
-      requestAnimationFrame(() => {
-        if(mapInstance) mapInstance.invalidateSize(true);
-      });
-    }
-
-    function buildLogChartMap(){
-      const deltas = computeDeltasSeconds();
-      const exA = deltas.activacion > TH_ACTIVACION;
-      const exI = deltas.intervencion > TH_INTERVENCION;
-
-      const interList = intervinientes.size ? Array.from(intervinientes).join(", ") : "—";
-      const matList = materiales.size ? Array.from(materiales).join(", ") : "—";
-
-      const svcColor = serviceColor(servicio);
-      const svcHtml = servicio === "—"
-        ? "—"
-        : `<span class="servicePill"><span class="dot" style="background:${svcColor}"></span>${servicio}</span>`;
-
-      logEl.innerHTML = `
-        <li><b>ALERTANTE</b><span>${alertante || "—"}</span></li>
-        <li><b>SERVICIO</b><span>${svcHtml}</span></li>
-        <li><b>LUGAR</b><span>${lugar || "—"}</span></li>
-        <li><b>INTERVINIENTES</b><span>${interList}</span></li>
-        <li><b>MATERIAL</b><span>${matList}</span></li>
-
-        <li><b>ACTIVACIÓN</b><span>${tsA.textContent}</span></li>
-        <li><b>INTERVENCIÓN</b><span>${tsI.textContent}</span></li>
-        <li><b>FINALIZACIÓN</b><span>${tsF.textContent}</span></li>
-        <li><b>DISPONIBLES</b><span>${tsD.textContent}</span></li>
-
-        <li><b>TIEMPO TOTAL</b><span>${timerEl.textContent}</span></li>
-
-        <li class="phase-activacion ${exA ? "exceeded" : ""}">
-          <b>ACTIVACIÓN (A→I)</b><span>${deltas.activacion} s</span>
-        </li>
-        <li class="phase-intervencion ${exI ? "exceeded" : ""}">
-          <b>INTERVENCIÓN (I→F)</b><span>${deltas.intervencion} s</span>
-        </li>
-        <li class="phase-finalizacion">
-          <b>FINALIZACIÓN (F→D)</b><span>${deltas.finalizacion} s</span>
-        </li>
-
-        <li><b>INFORME</b><span>${informe || "—"}</span></li>
-      `;
-
-      const labels = ["ACTIVACIÓN", "INTERVENCIÓN", "FINALIZACIÓN"];
-      const y = [deltas.activacion, deltas.intervencion, deltas.finalizacion];
-
-      const pA = makeEmojiPoint("🚨");
-      const pI = makeEmojiPoint("⚠️");
-      const pF = makeEmojiPoint("✅");
-
-      if(chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(chartCanvas, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label:"Tramo actual (s)",
-              data:y,
-              tension:0.25,
-              borderColor:"#1c71d8",
-              borderWidth:3,
-              pointStyle:[pA,pI,pF],
-              pointRadius:10,
-              pointHoverRadius:11,
-              pointBackgroundColor:"rgba(0,0,0,0)",
-              pointBorderColor:"rgba(0,0,0,0)",
-              pointBorderWidth:0
-            },
-            { label:`Techo de activación (${TH_ACTIVACION}s)`, data:[TH_ACTIVACION,TH_ACTIVACION,TH_ACTIVACION], tension:0, pointRadius:0, borderColor:"#f6d32d", borderWidth:2 },
-            { label:`Techo de intervención (${TH_INTERVENCION}s)`, data:[TH_INTERVENCION,TH_INTERVENCION,TH_INTERVENCION], tension:0, pointRadius:0, borderColor:"#e01b24", borderWidth:2 }
-          ]
-        },
-        options:{
-          responsive:true,
-          animation:false,
-          plugins:{ legend:{ display:true } },
-          scales:{ y:{ beginAtZero:true, title:{ display:true, text:"Segundos" } } }
-        }
-      });
-
-      renderCycleMap();
-    }
-
-    dlChartBtn.addEventListener("click", () => {
-      if(!chartInstance){ alert("Aún no hay gráfico para descargar."); return; }
-      const url = chartInstance.toBase64Image("image/png", 1);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `grafico_tramos_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    });
 
     function sendCycleToSheet(){
       const d = computeDeltasSeconds();
@@ -1049,14 +648,11 @@
     }
 
     function openModal(flow){
-      // Si el usuario no quiere formularios entre estados, avanzamos sin abrir nada.
       if(HIDE_FORMS_BETWEEN_STATES){
         if(flow === "activation"){
-          // valores por defecto
           alertante = alertante || "";
           servicio = servicio || "—";
           lugar = lugar || "";
-          // intervinientes/materiales se quedan como estén (normalmente vacíos)
           finalizeActivation();
           return;
         }
@@ -1103,9 +699,6 @@
       tsI.textContent="—";
       tsF.textContent="—";
       tsD.textContent="—";
-
-      setLogVisible(false);
-      toggleLogBtn.disabled = true;
     }
 
     const U = (s, max) => String(s ?? "").trim().toUpperCase().slice(0, max);
@@ -1320,6 +913,10 @@
         locA = loc;
         tA = Date.now();
         tsA.textContent = timestampES();
+
+        // VISOR
+        __sendToVISOR("ACTIVACION", locA, headerTitleEl ? headerTitleEl.textContent : document.title);
+
         btnA.disabled = true;
         btnI.disabled = false;
         setStage("intervencion");
@@ -1332,6 +929,10 @@
         locI = loc;
         tI = Date.now();
         tsI.textContent = timestampES();
+
+        // VISOR
+        __sendToVISOR("INTERVENCION", locI, headerTitleEl ? headerTitleEl.textContent : document.title);
+
         btnI.disabled = true;
         btnF.disabled = false;
         setStage("finalizacion");
@@ -1348,6 +949,10 @@
         locF = loc;
         tF = Date.now();
         tsF.textContent = timestampES();
+
+        // VISOR
+        __sendToVISOR("FINALIZACION", locF, headerTitleEl ? headerTitleEl.textContent : document.title);
+
         btnF.disabled = true;
         btnD.disabled = false;
         setStage("disponibles");
@@ -1360,16 +965,17 @@
         locD = loc;
         tD = Date.now();
         tsD.textContent = timestampES();
+
+        // VISOR
+        __sendToVISOR("DISPONIBLES", locD, headerTitleEl ? headerTitleEl.textContent : document.title);
+
         openModal("informe");
       });
     });
 
     function finalizeDisponibles(){
-      buildLogChartMap();
+      // (Antes: buildLogChartMap + habilitar panel) -> eliminado
       sendCycleToSheet();
-
-      toggleLogBtn.disabled = false;
-      setLogVisible(false);
 
       stopTimerAndReset();
       resetButtons();
@@ -1380,38 +986,6 @@
       ensureTimerRunning();
       openModal("activation");
     });
-
-    copyBtn.addEventListener("click", async () => {
-      const txt = (function(){
-        const d = computeDeltasSeconds();
-        const interList = intervinientes.size ? Array.from(intervinientes).join(", ") : "—";
-        const matList = materiales.size ? Array.from(materiales).join(", ") : "—";
-        return [
-          `ALERTANTE: ${alertante || "—"}`,
-          `SERVICIO: ${servicio}`,
-          `LUGAR: ${lugar || "—"}`,
-          `INTERVINIENTES: ${interList}`,
-          `MATERIAL: ${matList}`,
-          `ACTIVACIÓN: ${tsA.textContent}`,
-          `INTERVENCIÓN: ${tsI.textContent}`,
-          `FINALIZACIÓN: ${tsF.textContent}`,
-          `DISPONIBLES: ${tsD.textContent}`,
-          `TIEMPO TOTAL: ${timerEl.textContent}`,
-          `ACTIVACIÓN (A→I): ${d.activacion}s`,
-          `INTERVENCIÓN (I→F): ${d.intervencion}s`,
-          `FINALIZACIÓN (F→D): ${d.finalizacion}s`,
-          `INFORME: ${informe || "—"}`
-        ].join("\n");
-      })();
-
-      try{ await navigator.clipboard.writeText(txt); }
-      catch{ window.prompt("Copia el log:", txt); }
-    });
-
-    hideBtn.addEventListener("click", () => setLogVisible(false));
-
-    setLogVisible(false);
-    toggleLogBtn.disabled = true;
 
     resetButtons();
     stopTimerAndReset();
