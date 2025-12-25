@@ -64,9 +64,8 @@
       white-space: nowrap;
     }
 
-    /* ===== BUSCADOR (ahora es la primera fila del panel) ===== */
     .search-wrap{
-      margin-top:0;
+      margin-top:8px;
       display:flex;
       gap:8px;
       align-items:center;
@@ -153,7 +152,6 @@
       align-items:center;
       flex-wrap: wrap;
     }
-
     .sheet-wrap{
       margin-top:6px;
       display:flex;
@@ -167,9 +165,6 @@
       opacity:.85;
       min-width:120px;
     }
-
-    /* ===== Sheets NO visible nunca ===== */
-    .sheet-wrap{ display:none !important; }
 
     .size-btn{
       padding: 4px 8px;
@@ -191,7 +186,6 @@
       align-items:center;
       justify-content: space-between;
       gap:10px;
-      margin-top: 8px;
     }
 
     .hud-header .row{ flex: 1 1 auto; }
@@ -207,11 +201,8 @@
       user-select: none;
     }
 
-    /* ===== MINIMIZADO: solo visible search-wrap (buscador + quitar ruta) ===== */
     .hud.minimized{ padding: 8px 10px; }
-    .hud.minimized .hud-header{ display:none; }
     .hud.minimized .hud-body{ display:none; }
-    .hud.minimized #results{ display:none !important; }
 
     .leaflet-marker-icon.kmz-img-icon,
     .leaflet-marker-icon.me-img-icon{
@@ -269,15 +260,6 @@
 </head>
 <body>
   <div class="hud" id="hud">
-
-    <!-- ===== PRIMERA FILA (siempre visible, incluso minimizado) ===== -->
-    <div class="search-wrap">
-      <input id="searchBox" type="search" placeholder="Buscar punto por nombre…" autocomplete="off" />
-      <button id="clearRouteBtn" type="button" title="Quitar la ruta actual">Quitar ruta</button>
-    </div>
-
-    <div id="results" aria-label="Resultados de búsqueda"></div>
-
     <div class="hud-header">
       <div class="row">
         <button id="recenterBtn" type="button">Centrarme</button>
@@ -295,6 +277,13 @@
     </div>
 
     <div class="hud-body">
+      <div class="search-wrap">
+        <input id="searchBox" type="search" placeholder="Buscar punto por nombre…" autocomplete="off" />
+        <button id="clearRouteBtn" type="button" title="Quitar la ruta actual">Quitar ruta</button>
+      </div>
+
+      <div id="results" aria-label="Resultados de búsqueda"></div>
+
       <div class="icon-wrap">
         <select id="kmzSelect" title="Selecciona el KMZ al que aplicar el icono" disabled>
           <option value="">KMZ: (ninguno)</option>
@@ -302,7 +291,7 @@
         <input id="iconUrl" type="url" placeholder="URL directa del icono (png/svg/webp)…" inputmode="url" autocomplete="off" />
         <button id="applyIconBtn" type="button" title="Aplicar icono al KMZ seleccionado">Aplicar icono</button>
         <button id="resetIconBtn" type="button" title="Volver al punto de color">Punto</button>
-        <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">Borrar KMZ</button>
+        <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">🗑️ Borrar KMZ</button>
         <button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
         <button id="sizeUpBtn" type="button" class="size-btn" title="Icono más grande">+</button>
       </div>
@@ -314,7 +303,6 @@
         <button id="meSizeUpBtn" type="button" class="size-btn" title="Icono ubicación más grande">+</button>
       </div>
 
-      <!-- Mantengo esto por compatibilidad (localStorage / envío), pero NO se verá nunca -->
       <div class="sheet-wrap">
         <input id="sheetsEndpoint" type="url" placeholder="URL WebApp Sheets…" inputmode="url" autocomplete="off" />
         <input id="sheetsToken" type="text" placeholder="Token Sheets…" autocomplete="off" />
@@ -380,8 +368,7 @@
       const poiIndex = [];
       const trackIndex = [];
 
-      // ✅ Elimina el control +/− de Leaflet
-      const map = L.map("map", { zoomControl: false }).setView([40.4168, -3.7038], 6);
+      const map = L.map("map").setView([40.4168, -3.7038], 6);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
       // Wrapper para rotación del mapa sin interferir con los transforms internos de Leaflet
@@ -460,13 +447,6 @@
         hudToggleBtn.title = min ? "Expandir / mostrar" : "Minimizar / ocultar";
         try { localStorage.setItem(LS_HUD_MIN_KEY, min ? "1" : "0"); } catch {}
       };
-
-      // ✅ Expandir si está minimizado tocando/clicando el fondo del panel (sin afectar input/botón)
-      hudEl.addEventListener("click", (e) => {
-        if (!hudEl.classList.contains("minimized")) return;
-        if (e.target === searchBox || e.target === clearRouteBtn) return;
-        setHudMinimized(false);
-      });
 
       const openKmzDb = () => new Promise((resolve, reject) => {
         const req = indexedDB.open(KMZ_DB_NAME, KMZ_DB_VERSION);
@@ -1182,6 +1162,5 @@
       init();
     })();
   </script>
-  <script src="timex_visor_bridge.js"></script>
 </body>
 </html>
