@@ -25,573 +25,48 @@
       box-shadow: 0 6px 18px rgba(0,0,0,.15);
     }
 
-    .row{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap: nowrap;
-      white-space: nowrap;
-    }
-
-    button{ cursor:pointer; font-size: 11.5px; }
-
-    .file-btn{
-      display:inline-flex;
-      align-items:center;
-      padding: 2px 10px;
-      border: 1px solid rgba(0,0,0,.25);
-      border-radius: 6px;
-      background: #fff;
-      cursor: pointer;
-      user-select: none;
-      font-size: 11.5px;
-      line-height: 24px;
-      white-space: nowrap;
-    }
-
-    #kmzFile{ display:none; }
-
-    .leaflet-control-layers{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      font-size: 12px;
-      border-radius: 10px;
-    }
-
     .follow{
       display:flex;
       align-items:center;
       gap:4px;
       white-space: nowrap;
     }
-
-    .search-wrap{
-      margin-top:8px;
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap: wrap;
-    }
-
-    #searchBox{
-      width: 260px;
-      max-width: 70vw;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(0,0,0,.25);
-      font-size: 11.5px;
-      outline: none;
-    }
-
-    #clearRouteBtn{
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(0,0,0,.25);
-      background: #fff;
-    }
-
-    #results{
-      margin-top:6px;
-      max-height: 220px;
-      overflow:auto;
-      border: 1px solid rgba(0,0,0,.15);
-      border-radius: 10px;
-      background: rgba(255,255,255,.98);
-      display:none;
-    }
-
-    .result-item{
-      padding: 8px 10px;
-      cursor:pointer;
-      border-bottom: 1px solid rgba(0,0,0,.06);
-      font-size: 11.5px;
-    }
-
-    .result-item:last-child{ border-bottom: none; }
-    .result-item:hover{ background: rgba(0,0,0,.04); }
-    .muted{ color: rgba(0,0,0,.6); font-size: 12px; }
-
-    .icon-wrap{
-      margin-top:8px;
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap: wrap;
-    }
-
-    #kmzSelect{
-      max-width: 46vw;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(0,0,0,.25);
-      background:#fff;
-      font-size: 11.5px;
-    }
-
-    #iconUrl,
-    #meIconUrl{
-      width: 320px;
-      max-width: 70vw;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(0,0,0,.25);
-      font-size: 11.5px;
-      outline: none;
-    }
-
-    #applyIconBtn, #resetIconBtn, #applyMeIconBtn{
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid rgba(0,0,0,.25);
-      background: #fff;
-    }
-
-    .me-icon-wrap{
-      margin-top:6px;
-      display:flex;
-      gap:6px;
-      align-items:center;
-      flex-wrap: wrap;
-    }
-    .sheet-wrap{
-      margin-top:6px;
-      display:flex;
-      gap:6px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .sheet-wrap input{ flex: 1 1 240px; }
-    .sheet-wrap .status{
-      font-size:12px;
-      opacity:.85;
-      min-width:120px;
-    }
-
-    .size-btn{
-      padding: 4px 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(0,0,0,.25);
-      background: #fff;
-      cursor: pointer;
-      font-size: 16px;
-      line-height: 16px;
-    }
-
-    .kmz-img-icon{
-      border-radius: 50%;
-      overflow: hidden;
-    }
-
-    .hud-header{
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap:10px;
-    }
-
-    .hud-header .row{ flex: 1 1 auto; }
-
-    .hud-toggle{
-      border: 1px solid rgba(0,0,0,.25);
-      background: #fff;
-      border-radius: 8px;
-      padding: 2px 8px;
-      font-size: 14px;
-      line-height: 18px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .hud.minimized{ padding: 8px 10px; }
-    .hud.minimized .hud-body{ display:none; }
-
-    .leaflet-marker-icon.kmz-img-icon,
-    .leaflet-marker-icon.me-img-icon{
-      background: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-
-    /* ====== ICONO DE MI UBICACIÓN FIJO (NO ROTA) ====== */
-    .me-static-wrap{
-      position: relative;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .me-static-dot{
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 14px;
-      height: 14px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: #2b6cff;
-      border: 3px solid #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,.35);
-    }
-
-    .me-static-img{
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      overflow: hidden;
-      background: transparent;
-    }
-
-    .me-static-img img{ display:block; background: transparent; }
-
-    /* ====== ROTACIÓN DEL MAPA ====== */
-    #map .leaflet-pane,
-    #map .leaflet-control-container{
-      transform-origin: 50% 50%;
-    }
-
-    #map.rotate .map-rotator{
-      transform: rotate(var(--map-rot, 0deg)) scale(var(--map-scale, 1));
-    }
-    .map-rotator{
-      position:absolute; inset:0; transform-origin:50% 50%; will-change:transform;
-    }
   </style>
 </head>
 <body>
   <div class="hud" id="hud">
     <div class="hud-header">
-      <div class="row">
-        <button id="recenterBtn" type="button">Centrarme</button>
-        <button id="fitAllBtn" type="button">Ver todo</button>
-
-        <label class="follow">
-          <input id="followChk" type="checkbox" checked />
-          seguirme
-        </label>
-
-        <button id="chooseFilesBtn" type="button" class="file-btn">Elegir archivos</button>
-      </div>
-
-      <button id="hudToggleBtn" class="hud-toggle" type="button" aria-label="Minimizar panel" title="Minimizar / expandir">▾</button>
+      <button id="recenterBtn" type="button">Centrarme</button>
+      <label class="follow">
+        <input id="followChk" type="checkbox" checked />
+        seguirme
+      </label>
     </div>
-
-    <div class="hud-body">
-      <div class="search-wrap">
-        <input id="searchBox" type="search" placeholder="Buscar punto por nombre…" autocomplete="off" />
-        <button id="clearRouteBtn" type="button" title="Quitar la ruta actual">Quitar ruta</button>
-      </div>
-
-      <div id="results" aria-label="Resultados de búsqueda"></div>
-
-      <div class="icon-wrap">
-        <select id="kmzSelect" title="Selecciona el KMZ al que aplicar el icono" disabled>
-          <option value="">KMZ: (ninguno)</option>
-        </select>
-        <input id="iconUrl" type="url" placeholder="URL directa del icono (png/svg/webp)…" inputmode="url" autocomplete="off" />
-        <button id="applyIconBtn" type="button" title="Aplicar icono al KMZ seleccionado">Aplicar icono</button>
-        <button id="resetIconBtn" type="button" title="Volver al punto de color">Punto</button>
-        <button id="deleteKmzBtn" type="button" title="Borrar KMZ seleccionado">🗑️ Borrar KMZ</button>
-        <button id="sizeDownBtn" type="button" class="size-btn" title="Icono más pequeño">−</button>
-        <button id="sizeUpBtn" type="button" class="size-btn" title="Icono más grande">+</button>
-      </div>
-
-      <div class="me-icon-wrap">
-        <input id="meIconUrl" type="url" placeholder="Icono ubicación (URL)…" inputmode="url" autocomplete="off" />
-        <button id="applyMeIconBtn" type="button" title="Aplicar icono a tu ubicación">Aplicar</button>
-        <button id="meSizeDownBtn" type="button" class="size-btn" title="Icono ubicación más pequeño">−</button>
-        <button id="meSizeUpBtn" type="button" class="size-btn" title="Icono ubicación más grande">+</button>
-      </div>
-
-      <div class="sheet-wrap">
-        <input id="sheetsEndpoint" type="url" placeholder="URL WebApp Sheets…" inputmode="url" autocomplete="off" />
-        <input id="sheetsToken" type="text" placeholder="Token Sheets…" autocomplete="off" />
-        <button id="saveSheetsBtn" type="button" title="Guardar configuración">Guardar</button>
-        <span id="sheetsStatus" class="status" aria-live="polite"></span>
-      </div>
-    </div>
-
-    <input type="file" id="kmzFile" accept=".kmz" multiple />
   </div>
 
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.6.2/dist/togeojson.umd.js"></script>
 
   <script>
     (() => {
       "use strict";
 
       const $ = (id) => document.getElementById(id);
-
       const followChk = $("followChk");
       const recenterBtn = $("recenterBtn");
-      const fitAllBtn = $("fitAllBtn");
-      const kmzInput = $("kmzFile");
-      const chooseFilesBtn = $("chooseFilesBtn");
-      const hudEl = $("hud");
-      const hudToggleBtn = $("hudToggleBtn");
+      const mapEl = $("map");
 
-      const searchBox = $("searchBox");
-      const resultsEl = $("results");
-      const clearRouteBtn = $("clearRouteBtn");
+      let lastLatLng = null;
+      let lastBearing = NaN;
 
-      const kmzSelect = $("kmzSelect");
-      const iconUrlInput = $("iconUrl");
-      const applyIconBtn = $("applyIconBtn");
-      const resetIconBtn = $("resetIconBtn");
-      const sizeUpBtn = $("sizeUpBtn");
-      const sizeDownBtn = $("sizeDownBtn");
-      const deleteKmzBtn = $("deleteKmzBtn");
-
-      const meIconUrlInput = $("meIconUrl");
-      const applyMeIconBtn = $("applyMeIconBtn");
-      const sheetsEndpointInput = $("sheetsEndpoint");
-      const sheetsTokenInput = $("sheetsToken");
-      const saveSheetsBtn = $("saveSheetsBtn");
-      const sheetsStatusEl = $("sheetsStatus");
-
-      const meSizeUpBtn = $("meSizeUpBtn");
-      const meSizeDownBtn = $("meSizeDownBtn");
-
-      const KMZ_DB_NAME = "kmz_navegador_db";
-      const KMZ_DB_VERSION = 1;
-      const KMZ_STORE = "kmzFiles";
-      const LS_KMZ_META_KEY = "kmz_meta_v1";
-      const LS_ME_ICON_KEY = "me_icon_v1";
-      const LS_SHEETS_KEY = "sheets_push_v1";
-      const LS_HUD_MIN_KEY = "hud_minimized_v1";
-      const DEFAULT_SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyVoOiNjza3_21FpJ1C8gQeHahU_l_-8-5kBfxtjNVP3xAsrld38cakJvhOwkUZ-jH9zQ/exec";
-
-      const poiIndex = [];
-      const trackIndex = [];
-
+      // Inicializa el mapa
       const map = L.map("map").setView([40.4168, -3.7038], 6);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
-      // Wrapper para rotación del mapa sin interferir con los transforms internos de Leaflet
-      const mapRotWrap = (() => {
-        try {
-          const container = map.getContainer();
-          const pane = map.getPane("mapPane");
-          if (!container || !pane || pane.parentElement?.classList?.contains("map-rotator")) {
-            const wrap = document.createElement("div");
-            wrap.className = "map-rotator";
-            pane.parentElement?.insertBefore(wrap, pane);
-            wrap.appendChild(pane);
-            return wrap;
-          }
-          return pane.parentElement;
-        } catch { return null; }
-      })();
-
-      const overlays = {};
-      const layersControl = L.control.layers({}, overlays, { collapsed: false }).addTo(map);
-      const kmzLayersList = [];
-      let kmzCounter = 1;
-
-      let myMarker = null;
-      let myAccuracyCircle = null;
-      let lastLatLng = null;
-      let prevLatLng = null;
-      let lastBearing = NaN;
-      let compassBearing = NaN;
-      const posHistory = [];
-      const MAX_HISTORY_MS = 12000; // para calcular rumbo estable
-
-      let firstFix = true;
-
-      let meIconUrl = "";
-      let meIconSize = 14;
-
-      // Rumbo por brújula (DeviceOrientation) como fallback
-      (function initCompass() {
-        const handler = (ev) => {
-          let hd = NaN;
-          if (typeof ev.webkitCompassHeading === "number" && isFinite(ev.webkitCompassHeading)) {
-            hd = ev.webkitCompassHeading;
-          } else if (typeof ev.alpha === "number" && isFinite(ev.alpha)) {
-            if (ev.absolute === true) hd = (360 - ev.alpha) % 360;
-          }
-          if (typeof hd === "number" && isFinite(hd)) compassBearing = hd;
-        };
-
-        try {
-          window.addEventListener("deviceorientationabsolute", handler, { passive: true });
-          window.addEventListener("deviceorientation", handler, { passive: true });
-        } catch {}
-      })();
-
-      let trackGuideLine = null;
-      let trackGuideState = null;
-
-      const mapEl = $("map");
       let mapRotDeg = 0;
       let mapRotTarget = 0;
       let mapRotRaf = 0;
-
-      const safeJsonParse = (str, fallback) => {
-        try { return JSON.parse(str); } catch { return fallback; }
-      };
-
-      const normalize = (s) => (s ?? "").toString().trim();
-
-      const setResultsVisible = (v) => { resultsEl.style.display = v ? "block" : "none"; };
-
-      const setHudMinimized = (min) => {
-        hudEl.classList.toggle("minimized", !!min);
-        hudToggleBtn.textContent = min ? "▸" : "▾";
-        hudToggleBtn.setAttribute("aria-label", min ? "Expandir panel" : "Minimizar panel");
-        hudToggleBtn.title = min ? "Expandir / mostrar" : "Minimizar / ocultar";
-        try { localStorage.setItem(LS_HUD_MIN_KEY, min ? "1" : "0"); } catch {}
-      };
-
-      const openKmzDb = () => new Promise((resolve, reject) => {
-        const req = indexedDB.open(KMZ_DB_NAME, KMZ_DB_VERSION);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(KMZ_STORE)) {
-            const store = db.createObjectStore(KMZ_STORE, { keyPath: "id" });
-            store.createIndex("addedAt", "addedAt", { unique: false });
-          }
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-
-      const idbPutKmz = async (id, fileName, arrayBuffer) => {
-        const db = await openKmzDb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(KMZ_STORE, "readwrite");
-          tx.objectStore(KMZ_STORE).put({ id, fileName, buffer: arrayBuffer, addedAt: Date.now() });
-          tx.oncomplete = () => { db.close(); resolve(true); };
-          tx.onerror = () => { const err = tx.error; db.close(); reject(err); };
-        });
-      };
-
-      const idbGetAllKmz = async () => {
-        const db = await openKmzDb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(KMZ_STORE, "readonly");
-          const req = tx.objectStore(KMZ_STORE).getAll();
-          req.onsuccess = () => { const rows = req.result || []; db.close(); resolve(rows); };
-          req.onerror = () => { const err = req.error; db.close(); reject(err); };
-        });
-      };
-
-      const idbDeleteKmz = async (id) => {
-        const db = await openKmzDb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(KMZ_STORE, "readwrite");
-          tx.objectStore(KMZ_STORE).delete(id);
-          tx.oncomplete = () => { db.close(); resolve(true); };
-          tx.onerror = () => { const err = tx.error; db.close(); reject(err); };
-        });
-      };
-
-      const saveKmzMeta = () => {
-        const meta = kmzLayersList.map(e => ({
-          label: e.label,
-          fileName: e.fileName,
-          color: e.color,
-          iconUrl: e.iconUrl || "",
-          iconSize: e.iconSize || 10
-        }));
-        try { localStorage.setItem(LS_KMZ_META_KEY, JSON.stringify(meta)); } catch {}
-      };
-
-      const loadKmzMeta = () => {
-        try { return safeJsonParse(localStorage.getItem(LS_KMZ_META_KEY), []); } catch { return []; }
-      };
-
-      const saveMeIconPrefs = () => {
-        const prefs = { url: meIconUrl || "", size: meIconSize || 14 };
-        try { localStorage.setItem(LS_ME_ICON_KEY, JSON.stringify(prefs)); } catch {}
-      };
-
-      const loadMeIconPrefs = () => {
-        try { return safeJsonParse(localStorage.getItem(LS_ME_ICON_KEY), null); } catch { return null; }
-      };
-
-      let sheetsEndpoint = "";
-      let sheetsToken = "1234";
-      let lastSheetsSend = 0;
-
-      const saveSheetsPrefs = () => {
-        const prefs = { endpoint: sheetsEndpoint || "", token: sheetsToken || "" };
-        try { localStorage.setItem(LS_SHEETS_KEY, JSON.stringify(prefs)); } catch {}
-      };
-
-      const loadSheetsPrefs = () => {
-        try { return safeJsonParse(localStorage.getItem(LS_SHEETS_KEY), null); } catch { return null; }
-      };
-
-      const setSheetsStatus = (msg) => {
-        if (!sheetsStatusEl) return;
-        sheetsStatusEl.textContent = msg || "";
-        if (msg) {
-          clearTimeout(setSheetsStatus._t);
-          setSheetsStatus._t = setTimeout(() => { if (sheetsStatusEl.textContent === msg) sheetsStatusEl.textContent = ""; }, 2500);
-        }
-      };
-
-      const sendCoordsToSheets = (lat, lng, acc, ts) => {
-        if (!sheetsEndpoint || !sheetsToken) return;
-        const now = Date.now();
-        if ((now - lastSheetsSend) < 3000) return;
-        lastSheetsSend = now;
-
-        const payload = { token: sheetsToken, lat, lng, acc: acc || 0, ts: ts || now };
-
-        fetch(sheetsEndpoint, {
-          method: "POST",
-          mode: "no-cors",
-          body: JSON.stringify(payload),
-          keepalive: true
-        }).then(() => {
-          setSheetsStatus("Enviado");
-        }).catch(() => {
-          setSheetsStatus("Error envío");
-        });
-      };
-
-      const kmzColorForIndex = (i) => `hsl(${(i * 137.508) % 360} 85% 50%)`;
-
-      const makeKmzDotIcon = (color) => {
-        const size = 10;
-        const border = 2;
-        return L.divIcon({
-          className: "",
-          html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:${border}px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.25);"></div>`,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2]
-        });
-      };
-
-      const makeKmzImageIcon = (url, size) => L.icon({
-        iconUrl: url,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
-        popupAnchor: [0, -size / 2],
-        className: "kmz-img-icon"
-      });
-
-      /* ===== CAMBIO CLAVE: icono de mi ubicación FIJO (no rota) ===== */
-      const makeMeStaticIcon = (url, size) => {
-        const s = Math.max(10, Math.min(96, Math.round(size || 14)));
-        const imgHtml = url
-          ? `<span class="me-static-img" style="width:${s}px;height:${s}px;"><img src="${url}" style="width:${s}px;height:${s}px;" /></span>`
-          : `<span class="me-static-dot"></span>`;
-
-        return L.divIcon({
-          className: "me-img-icon",
-          html: `<div class="me-static-wrap" style="width:${s}px;height:${s}px;">${imgHtml}</div>`,
-          iconSize: [s, s],
-          iconAnchor: [s / 2, s / 2]
-        });
-      };
 
       const setMapRotationDegrees = (deg) => {
         const d = (typeof deg === "number" && isFinite(deg)) ? deg : 0;
@@ -606,12 +81,7 @@
         const diff = mapRotTarget - mapRotDeg;
         mapRotDeg = Math.abs(diff) < 0.5 ? mapRotTarget : (mapRotDeg + diff * 0.18);
 
-        const abs = Math.abs(mapRotDeg);
-        const scale = abs > 1 ? 1.12 : 1.0;
-
-        mapEl.classList.add("rotate");
-        mapEl.style.setProperty("--map-rot", `${mapRotDeg}deg`);
-        mapEl.style.setProperty("--map-scale", `${scale}`);
+        mapEl.style.transform = `rotate(${mapRotDeg}deg)`;
 
         if (Math.abs(mapRotTarget - mapRotDeg) >= 0.5) {
           mapRotRaf = requestAnimationFrame(animateMapRotation);
@@ -621,547 +91,59 @@
       const clearMapRotation = () => {
         mapRotTarget = 0;
         mapRotDeg = 0;
-        mapEl.style.setProperty("--map-rot", "0deg");
-        mapEl.style.setProperty("--map-scale", "1");
-        mapEl.classList.remove("rotate");
+        mapEl.style.transform = `rotate(0deg)`;
       };
 
-      const toRad = (deg) => (deg * Math.PI) / 180;
-      const toDeg = (rad) => (rad * 180) / Math.PI;
-
-      const bearingBetween = (from, to) => {
-        if (!from || !to) return NaN;
-        const φ1 = toRad(from.lat), φ2 = toRad(to.lat);
-        const Δλ = toRad(to.lng - from.lng);
-        const y = Math.sin(Δλ) * Math.cos(φ2);
-        const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-        const θ = Math.atan2(y, x);
-        const brng = (toDeg(θ) + 360) % 360;
-        return brng;
-      };
-
-      const clearRoute = () => {
-        if (trackGuideLine) {
-          map.removeLayer(trackGuideLine);
-          trackGuideLine = null;
-        }
-        trackGuideState = null;
-      };
-
-      const proj = (ll) => map.options.crs.project(ll);
-
-      const closestPointOnSegment = (P, A, B) => {
-        const abx = B.x - A.x, aby = B.y - A.y;
-        const apx = P.x - A.x, apy = P.y - A.y;
-        const ab2 = abx * abx + aby * aby;
-        let t = ab2 ? (apx * abx + apy * aby) / ab2 : 0;
-        t = Math.max(0, Math.min(1, t));
-        return { x: A.x + t * abx, y: A.y + t * aby, t };
-      };
-
-      const closestPointOnPolyline = (latlngs, targetLatLng) => {
-        if (!latlngs || latlngs.length < 2) return null;
-        const P = proj(targetLatLng);
-        let best = null;
-        for (let i = 0; i < latlngs.length - 1; i++) {
-          const A = proj(latlngs[i]);
-          const B = proj(latlngs[i + 1]);
-          const cp = closestPointOnSegment(P, A, B);
-          const dx = P.x - cp.x, dy = P.y - cp.y;
-          const d = Math.hypot(dx, dy);
-          if (!best || d < best.d) best = { i, t: cp.t, x: cp.x, y: cp.y, d };
-        }
-        if (!best) return null;
-        const ll = map.options.crs.unproject(L.point(best.x, best.y));
-        return { idx: best.i, t: best.t, closestLatLng: ll, distMeters: best.d };
-      };
-
-      const extractSubPolyline = (latlngs, a, b) => {
-        if (!latlngs || latlngs.length < 2 || !a || !b) return null;
-
-        const aPos = a.idx + a.t;
-        const bPos = b.idx + b.t;
-        const forward = aPos <= bPos;
-        const start = forward ? a : b;
-        const end = forward ? b : a;
-
-        const out = [start.closestLatLng];
-        for (let i = start.idx + 1; i <= end.idx; i++) out.push(latlngs[i]);
-        out[out.length - 1] = end.closestLatLng;
-
-        return forward ? out : out.reverse();
-      };
-
-      const pickBestTrack = (fromLatLng, toLatLng) => {
-        if (!trackIndex.length) return null;
-        let best = null;
-        for (const tr of trackIndex) {
-          const c1 = closestPointOnPolyline(tr.latlngs, fromLatLng);
-          const c2 = closestPointOnPolyline(tr.latlngs, toLatLng);
-          if (!c1 || !c2) continue;
-          const score = c1.distMeters + c2.distMeters;
-          if (!best || score < best.score) best = { track: tr, from: c1, to: c2, score };
-        }
-        return best;
-      };
-
-      const renderResults = (items) => {
-        resultsEl.innerHTML = "";
-        if (!items.length) return setResultsVisible(false);
-
-        const frag = document.createDocumentFragment();
-        items.slice(0, 80).forEach((it) => {
-          const div = document.createElement("div");
-          div.className = "result-item";
-          div.innerHTML = `<b>${it.name || "Sin nombre"}</b><br/><span class="muted">${it.kmzLabel}</span>`;
-          div.addEventListener("click", () => {
-            setResultsVisible(false);
-            searchBox.blur();
-
-            map.setView(it.latlng, Math.max(map.getZoom(), 17));
-            it.marker?.openPopup?.();
-
-            if (!lastLatLng) return;
-
-            clearRoute();
-
-            const best = pickBestTrack(lastLatLng, it.latlng);
-            trackGuideState = { trackLatlngs: best ? best.track.latlngs : null, destLatLng: it.latlng };
-
-            let lineLatLngs = null;
-            if (best) {
-              const cur = closestPointOnPolyline(best.track.latlngs, lastLatLng);
-              const dst = closestPointOnPolyline(best.track.latlngs, it.latlng);
-              const seg = (cur && dst) ? extractSubPolyline(best.track.latlngs, cur, dst) : null;
-              if (seg?.length) lineLatLngs = [lastLatLng, cur.closestLatLng, ...seg.slice(1)];
-            }
-            if (!lineLatLngs) lineLatLngs = [lastLatLng, it.latlng];
-
-            trackGuideLine = L.polyline(lineLatLngs, { weight: 6, opacity: 0.85 }).addTo(map);
-
-            const b = trackGuideLine.getBounds?.();
-            if (b?.isValid?.()) map.fitBounds(b.pad(0.2));
-          });
-          frag.appendChild(div);
-        });
-
-        resultsEl.appendChild(frag);
-        setResultsVisible(true);
-      };
-
-      const doSearch = () => {
-        const q = normalize(searchBox.value).toLowerCase();
-        if (!poiIndex.length || !q) return setResultsVisible(false);
-        renderResults(poiIndex.filter(p => (p.name || "").toLowerCase().includes(q)));
-      };
-
-      const getKmzEntryByLabel = (label) => kmzLayersList.find(x => x.label === label);
-
-      const ensureKmzSelectEnabled = () => {
-        const has = kmzLayersList.length > 0;
-        kmzSelect.disabled = !has;
-        if (has && !kmzSelect.value) kmzSelect.value = kmzLayersList[kmzLayersList.length - 1].label;
-      };
-
-      const applyIconToKmz = (label, iconUrl) => {
-        const entry = getKmzEntryByLabel(label);
-        const url = (iconUrl || "").trim();
-        if (!entry || !url) return;
-
-        entry.iconUrl = url;
-        entry.iconSize = (typeof entry.iconSize === "number" && isFinite(entry.iconSize)) ? entry.iconSize : 10;
-
-        const icon = makeKmzImageIcon(url, entry.iconSize);
-        entry.markers.forEach(m => m.setIcon(icon));
-        saveKmzMeta();
-      };
-
-      const resetIconToDot = (label) => {
-        const entry = getKmzEntryByLabel(label);
-        if (!entry) return;
-
-        const dot = makeKmzDotIcon(entry.color);
-        entry.markers.forEach(m => m.setIcon(dot));
-        entry.iconUrl = "";
-        entry.iconSize = 10;
-        saveKmzMeta();
-      };
-
-      const resizeKmzIcon = (label, delta) => {
-        const entry = getKmzEntryByLabel(label);
-        if (!entry || !entry.iconUrl) return;
-
-        entry.iconSize = Math.max(5, (entry.iconSize || 10) + delta);
-        const icon = makeKmzImageIcon(entry.iconUrl, entry.iconSize);
-        entry.markers.forEach(m => m.setIcon(icon));
-        saveKmzMeta();
-      };
-
-      const deleteSelectedKmz = async () => {
-        const label = kmzSelect.value;
-        if (!label) return;
-
-        const idx = kmzLayersList.findIndex(k => k.label === label);
-        if (idx === -1) return;
-
-        const entry = kmzLayersList[idx];
-
-        if (entry.layer && map.hasLayer(entry.layer)) map.removeLayer(entry.layer);
-        try { entry.layer && layersControl.removeLayer(entry.layer); } catch {}
-
-        delete overlays[label];
-
-        for (let i = poiIndex.length - 1; i >= 0; i--) if (poiIndex[i].kmzLabel === label) poiIndex.splice(i, 1);
-        for (let i = trackIndex.length - 1; i >= 0; i--) if (trackIndex[i].kmzLabel === label) trackIndex.splice(i, 1);
-
-        try { await idbDeleteKmz(label); } catch {}
-
-        kmzLayersList.splice(idx, 1);
-        saveKmzMeta();
-
-        [...kmzSelect.options].forEach(o => { if (o.value === label) o.remove(); });
-
-        kmzSelect.value = "";
-        iconUrlInput.value = "";
-        ensureKmzSelectEnabled();
-
-        const newEntry = getKmzEntryByLabel(kmzSelect.value);
-        if (newEntry) iconUrlInput.value = newEntry.iconUrl || "";
-      };
-
-      const loadKmzData = async (fileName, arrayBuffer, meta) => {
-        const color = meta?.color || kmzColorForIndex(kmzCounter);
-        const kmzDotIcon = makeKmzDotIcon(color);
-
-        const entry = {
-          label: meta?.label || "",
-          fileName,
-          color,
-          layer: null,
-          markers: [],
-          iconUrl: meta?.iconUrl || "",
-          iconSize: (typeof meta?.iconSize === "number" && isFinite(meta.iconSize)) ? meta.iconSize : 10
-        };
-
-        const zip = await JSZip.loadAsync(arrayBuffer);
-        const kmlName = Object.keys(zip.files).find(n => n.toLowerCase().endsWith(".kml"));
-        if (!kmlName) throw new Error("KMZ sin .kml interno");
-
-        const dom = new DOMParser().parseFromString(await zip.files[kmlName].async("text"), "text/xml");
-        const geojson = toGeoJSON.kml(dom);
-
-        const feats = geojson?.features || [];
-        for (const f of feats) {
-          const g = f?.geometry;
-          if (!g) continue;
-          if (g.type === "LineString" && Array.isArray(g.coordinates)) {
-            const latlngs = g.coordinates.map(c => L.latLng(c[1], c[0]));
-            if (latlngs.length >= 2) trackIndex.push({ kmzLabel: entry.label || "", latlngs });
-          } else if (g.type === "MultiLineString" && Array.isArray(g.coordinates)) {
-            for (const part of g.coordinates) {
-              const latlngs = (part || []).map(c => L.latLng(c[1], c[0]));
-              if (latlngs.length >= 2) trackIndex.push({ kmzLabel: entry.label || "", latlngs });
-            }
-          }
-        }
-
-        const pointIcon = entry.iconUrl ? makeKmzImageIcon(entry.iconUrl, entry.iconSize) : kmzDotIcon;
-
-        const layer = L.geoJSON(geojson, {
-          pointToLayer: (feature, ll) => {
-            const marker = L.marker(ll, { icon: pointIcon });
-            entry.markers.push(marker);
-
-            const nm = feature?.properties?.name ? String(feature.properties.name) : "";
-            if (nm) poiIndex.push({ name: nm, latlng: ll, marker, kmzLabel: entry.label || "" });
-
-            return marker;
-          }
-        }).addTo(map);
-
-        const label = entry.label || `${kmzCounter++}. ${fileName}`;
-        entry.label = label;
-        entry.layer = layer;
-
-        overlays[label] = layer;
-        layersControl.addOverlay(layer, label);
-        kmzLayersList.push(entry);
-
-        const opt = document.createElement("option");
-        opt.value = label;
-        opt.textContent = label;
-        kmzSelect.appendChild(opt);
-
-        kmzSelect.disabled = false;
-        kmzSelect.value = label;
-        iconUrlInput.value = "";
-
-        const b = layer.getBounds?.();
-        if (b?.isValid?.()) map.fitBounds(b.pad(0.2));
-
-        saveKmzMeta();
-      };
-
-      const loadKmzFile = async (file) => {
-        const buf = await file.arrayBuffer();
-        await loadKmzData(file.name, buf, null);
-        const last = kmzLayersList[kmzLayersList.length - 1];
-        if (last?.label) {
-          try { await idbPutKmz(last.label, last.fileName, buf); } catch {}
-        }
-      };
-
-      const restorePersistedKmz = async () => {
-        const meta = loadKmzMeta();
-        let rows = [];
-        try { rows = await idbGetAllKmz(); } catch {}
-
-        const metaMap = new Map((meta || []).map(m => [m.label, m]));
-        rows.sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
-
-        let maxN = 0;
-        for (const r of rows) {
-          const m = metaMap.get(r.id) || { label: r.id, fileName: r.fileName };
-          const mm = String(m.label || "").match(/^(\d+)\./);
-          if (mm) maxN = Math.max(maxN, parseInt(mm[1], 10));
-          try { await loadKmzData(r.fileName, r.buffer, m); } catch {}
-        }
-        if (maxN > 0) kmzCounter = maxN + 1;
-      };
-
-      /* ===== UBICACIÓN: el mapa se orienta, el icono NO gira ===== */
       const updateMyLocation = (pos) => {
         const { latitude, longitude, accuracy, heading } = pos.coords;
-
         const nextLatLng = L.latLng(latitude, longitude);
-        const prev = lastLatLng;
-        prevLatLng = prev;
+
         lastLatLng = nextLatLng;
 
         let bearing = (typeof heading === "number" && isFinite(heading)) ? heading : NaN;
 
-        const now = Date.now();
-        posHistory.push({ ll: nextLatLng, t: now });
-        while (posHistory.length && (now - posHistory[0].t) > MAX_HISTORY_MS) posHistory.shift();
-
+        // Si no se tiene un rumbo (heading) confiable, intenta estimarlo a partir de los puntos anteriores
         if (!isFinite(bearing)) {
-          let ref = null;
-          for (let i = 0; i < posHistory.length - 1; i++) {
-            const cand = posHistory[i].ll;
-            const dist = cand.distanceTo(nextLatLng);
-            if (dist >= 0.8) { ref = cand; break; }
-          }
-          if (ref) bearing = bearingBetween(ref, nextLatLng);
-        }
-
-        if (!isFinite(bearing) && typeof compassBearing === "number" && isFinite(compassBearing)) {
-          bearing = compassBearing;
+          bearing = lastBearing;
         }
 
         if (isFinite(bearing)) lastBearing = bearing;
-        else if (typeof lastBearing === "number" && isFinite(lastBearing)) bearing = lastBearing;
-
-        if (!myMarker) {
-          myMarker = L.marker(lastLatLng, { icon: makeMeStaticIcon(meIconUrl, meIconSize) }).addTo(map);
-          myAccuracyCircle = L.circle(lastLatLng, { radius: accuracy, weight: 1, fillOpacity: 0.1 }).addTo(map);
-        } else {
-          myMarker.setLatLng(lastLatLng);
-          myMarker.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-          myAccuracyCircle.setLatLng(lastLatLng);
-          myAccuracyCircle.setRadius(accuracy);
-        }
 
         if (followChk.checked) {
-          const b = (typeof bearing === "number" && isFinite(bearing)) ? bearing : lastBearing;
-          if (typeof b === "number" && isFinite(b)) {
-            setMapRotationDegrees(b); // SOLO rota el mapa
-          }
+          setMapRotationDegrees(bearing); // Rota el mapa según el rumbo del usuario
         } else {
-          clearMapRotation();
+          clearMapRotation(); // Si "seguirme" no está activado, se detiene la rotación
         }
 
-        if (firstFix) {
+        map.setView(nextLatLng, 17); // Centra el mapa en la nueva ubicación
+      };
+
+      // Configuración de la geolocalización
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updateMyLocation, () => {}, {
+          enableHighAccuracy: true,
+          maximumAge: 1000,
+          timeout: 10000
+        });
+      }
+
+      // Función para recentrar el mapa al clic
+      recenterBtn.addEventListener("click", () => {
+        if (lastLatLng) {
           map.setView(lastLatLng, 17);
-          firstFix = false;
-        } else if (followChk.checked) {
-          map.panTo(lastLatLng, { animate: true });
         }
-
-        if (followChk.checked) sendCoordsToSheets(latitude, longitude, accuracy, pos.timestamp);
-
-        if (trackGuideLine && trackGuideState?.destLatLng && lastLatLng) {
-          if (trackGuideState.trackLatlngs?.length >= 2) {
-            const tr = trackGuideState.trackLatlngs;
-            const cur = closestPointOnPolyline(tr, lastLatLng);
-            const dst = closestPointOnPolyline(tr, trackGuideState.destLatLng);
-            const seg = (cur && dst) ? extractSubPolyline(tr, cur, dst) : null;
-            if (seg?.length) trackGuideLine.setLatLngs([lastLatLng, cur.closestLatLng, ...seg.slice(1)]);
-          } else {
-            trackGuideLine.setLatLngs([lastLatLng, trackGuideState.destLatLng]);
-          }
-
-          if (lastLatLng.distanceTo(trackGuideState.destLatLng) < 12) clearRoute();
-        }
-      };
-
-      const init = async () => {
-        try {
-          const v = localStorage.getItem(LS_HUD_MIN_KEY);
-          if (v === "1") setHudMinimized(true);
-        } catch {}
-
-        const mePrefs = loadMeIconPrefs();
-        if (mePrefs && typeof mePrefs === "object") {
-          if (typeof mePrefs.url === "string") meIconUrl = mePrefs.url;
-          if (typeof mePrefs.size === "number" && isFinite(mePrefs.size)) {
-            meIconSize = Math.max(6, Math.min(96, Math.round(mePrefs.size)));
-          }
-        }
-        meIconUrlInput.value = meIconUrl || "";
-
-        const sp = loadSheetsPrefs();
-        if (sp && typeof sp === "object") {
-          if (typeof sp.endpoint === "string") sheetsEndpoint = sp.endpoint.trim();
-          if (typeof sp.token === "string") sheetsToken = sp.token.trim();
-        }
-        if (!sheetsEndpoint) sheetsEndpoint = DEFAULT_SHEETS_ENDPOINT;
-        if (sheetsEndpointInput) sheetsEndpointInput.value = sheetsEndpoint || "";
-        if (sheetsTokenInput) sheetsTokenInput.value = sheetsToken || "";
-
-        try { await restorePersistedKmz(); } catch {}
-        ensureKmzSelectEnabled();
-
-        const entry = getKmzEntryByLabel(kmzSelect.value);
-        if (entry) iconUrlInput.value = entry.iconUrl || "";
-
-        if (navigator.geolocation) {
-          navigator.geolocation.watchPosition(updateMyLocation, () => {}, {
-            enableHighAccuracy: true,
-            maximumAge: 1000,
-            timeout: 10000
-          });
-        }
-      };
+      });
 
       followChk.addEventListener("change", () => {
         if (followChk.checked) {
-          const b = (typeof lastBearing === "number" && isFinite(lastBearing))
-            ? lastBearing
-            : ((typeof compassBearing === "number" && isFinite(compassBearing)) ? compassBearing : NaN);
-          if (typeof b === "number" && isFinite(b)) setMapRotationDegrees(b);
+          if (lastBearing) {
+            setMapRotationDegrees(lastBearing);
+          }
         } else {
           clearMapRotation();
         }
       });
-
-      hudToggleBtn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        setHudMinimized(!hudEl.classList.contains("minimized"));
-      });
-
-      chooseFilesBtn.addEventListener("click", () => kmzInput.click());
-
-      clearRouteBtn.addEventListener("click", clearRoute);
-
-      searchBox.addEventListener("input", doSearch);
-      searchBox.addEventListener("focus", doSearch);
-
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest?.(".hud")) setResultsVisible(false);
-      });
-
-      recenterBtn.addEventListener("click", () => {
-        if (lastLatLng) map.setView(lastLatLng, Math.max(map.getZoom(), 17));
-      });
-
-      fitAllBtn.addEventListener("click", () => {
-        let bounds = null;
-
-        for (const { layer } of kmzLayersList) {
-          if (!map.hasLayer(layer)) continue;
-          const b = layer.getBounds?.();
-          if (b?.isValid?.()) bounds = bounds ? bounds.extend(b) : b;
-        }
-
-        if (lastLatLng) {
-          const b = L.latLngBounds([lastLatLng, lastLatLng]);
-          bounds = bounds ? bounds.extend(b) : b;
-        }
-
-        if (bounds?.isValid?.()) map.fitBounds(bounds.pad(0.2));
-      });
-
-      applyMeIconBtn.addEventListener("click", () => {
-        const url = meIconUrlInput.value.trim();
-        if (!url) {
-          meIconUrl = "";
-          meIconSize = 14;
-          myMarker?.setIcon(makeMeStaticIcon("", meIconSize));
-          saveMeIconPrefs();
-          return;
-        }
-        meIconUrl = url;
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      saveSheetsBtn.addEventListener("click", () => {
-        sheetsEndpoint = (sheetsEndpointInput.value || "").trim();
-        sheetsToken = (sheetsTokenInput.value || "").trim();
-        saveSheetsPrefs();
-        setSheetsStatus(sheetsEndpoint && sheetsToken ? "Guardado" : "Falta URL/token");
-      });
-
-      meSizeUpBtn.addEventListener("click", () => {
-        if (!meIconUrl) return;
-        meIconSize += 5;
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      meSizeDownBtn.addEventListener("click", () => {
-        if (!meIconUrl) return;
-        meIconSize = Math.max(5, meIconSize - 5);
-        myMarker?.setIcon(makeMeStaticIcon(meIconUrl, meIconSize));
-        saveMeIconPrefs();
-      });
-
-      applyIconBtn.addEventListener("click", () => {
-        ensureKmzSelectEnabled();
-        applyIconToKmz(kmzSelect.value, iconUrlInput.value);
-      });
-
-      resetIconBtn.addEventListener("click", () => {
-        ensureKmzSelectEnabled();
-        resetIconToDot(kmzSelect.value);
-      });
-
-      sizeUpBtn.addEventListener("click", () => resizeKmzIcon(kmzSelect.value, +5));
-      sizeDownBtn.addEventListener("click", () => resizeKmzIcon(kmzSelect.value, -5));
-
-      kmzSelect.addEventListener("change", () => {
-        const entry = getKmzEntryByLabel(kmzSelect.value);
-        iconUrlInput.value = entry?.iconUrl || "";
-      });
-
-      deleteKmzBtn.addEventListener("click", async () => {
-        const label = kmzSelect.value;
-        if (!label) return;
-        if (confirm("¿Borrar este KMZ definitivamente?")) await deleteSelectedKmz();
-      });
-
-      kmzInput.addEventListener("change", async (e) => {
-        const files = Array.from(e.target.files || []);
-        for (const f of files) {
-          try { await loadKmzFile(f); } catch {}
-        }
-        kmzInput.value = "";
-      });
-
-      init();
     })();
   </script>
-  <script src="timex_visor_bridge.js"></script>
 </body>
 </html>
